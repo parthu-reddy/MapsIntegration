@@ -30,12 +30,30 @@ async function initApp() {
     }
 
     try {
+        // Fetch and modify the style JSON to remove the offending 3d_model_data layer
+        // which causes a MapLibre validation error in the console.
+        const styleRes = await fetch(`https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${apiKey}`);
+        if (!styleRes.ok) throw new Error(`Style fetch failed: ${styleRes.status}`);
+        const styleJson = await styleRes.json();
+        
+        // Strip out the broken layer
+        if (styleJson.layers) {
+            styleJson.layers = styleJson.layers.filter(layer => layer.id !== '3d_model_data');
+        }
+
         const olaMaps = new window.OlaMaps({ apiKey });
         mapInstance = await olaMaps.init({
-            style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
+            style: styleJson,
             container: 'map',
             center: [CENTER_LNG, CENTER_LAT],
             zoom: 13,
+        });
+
+        // Suppress missing image warnings from Ola Maps default style
+        mapInstance.on('styleimagemissing', (e) => {
+            const id = e.id;
+            // Provide a 1x1 empty transparent pixel to suppress the warning
+            mapInstance.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
         });
 
         mapInstance.on('click', handleMapClick);
