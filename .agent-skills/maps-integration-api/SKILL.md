@@ -61,6 +61,25 @@ Default local environment runs on: `http://localhost:8080`
 }
 ```
 
+### 6. Get Driver Location
+**Endpoint**: `GET /api/fleet/location`
+**Purpose**: Fetch a specific driver's current coordinates.
+**Query Parameters**:
+- `cityId` (String, required)
+- `driverId` (String, required)
+
+### 7. Get Nearby Drivers
+**Endpoint**: `GET /api/fleet/nearby`
+**Purpose**: Fetch up to 10 nearby available drivers.
+**Query Parameters**:
+- `cityId` (String, required)
+- `lat` (Double, required)
+- `lng` (Double, required)
+- `radius` (Double, optional): defaults to 5.0 km
+
+## Web UI
+A full interactive MapLibre frontend is available at `http://localhost:8080/`. It visualizes the entire system, allowing you to spawn a virtual fleet, click on the map to create orders, and watch dispatch routing in real-time.
+
 ## WebSocket Integration (Driver Telemetry)
 
 For driver apps continually broadcasting their GPS location.

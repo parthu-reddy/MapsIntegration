@@ -47,6 +47,12 @@ A massive amount of driver pings is handled by `TextWebSocketHandler`.
 ### 6. MCP Endpoints
 The service includes the `spring-ai-mcp-server-webmvc-spring-boot-starter`. Critical methods across the services are annotated with `@Tool`, exposing them via `/mcp/sse` automatically to LLMs and agents.
 
+### 7. Interactive Frontend UI (`static/index.html`)
+The service hosts a single-page frontend built with **MapLibre GL JS** and Vanilla JavaScript.
+- **Dynamic Resource Transformation**: MapLibre intercepts network requests (`transformRequest`) to transparently attach the `api_key` for Ola Maps tile fetching.
+- **Custom Render Layers**: Utilizes SVG icons (`background-image`) mapped natively inside MapLibre markers.
+- **Event Flow**: Map clicks invoke `/api/logistics/dispatch`, which atomically assigns a driver in Redis and returns an Ola Maps polyline rendered via a `geojson` MapLibre layer.
+
 ## Troubleshooting Common Issues
 
 - **PostGIS Exceptions**: Ensure the `hibernate.dialect` in `application.yml` is `org.hibernate.spatial.dialect.postgis.PostgisDialect`.

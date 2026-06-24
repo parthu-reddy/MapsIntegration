@@ -2,14 +2,14 @@ version: '3.8'
 
 services:
   db:
-    # PostGIS image which includes PostgreSQL and the geospatial extensions
-    image: postgis/postgis:15-3.4
+    # PostGIS image which natively supports Apple Silicon ARM64
+    image: kartoza/postgis:16-3.4
     container_name: maps_postgres_db
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: food_delivery
+      POSTGRES_PASS: postgres
+      POSTGRES_DBNAME: food_delivery
     ports:
       - "5432:5432"
     volumes:

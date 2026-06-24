@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ola Maps Fleet Command</title>
+    
+    <!-- MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Glassmorphism Sidebar */
+        #sidebar {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            width: 340px;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 20px;
+            padding: 24px;
+            color: #f8fafc;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            margin-bottom: 8px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Status Log */
+        #status-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #10b981;
+            height: 120px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .log-entry {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 4px;
+        }
+        .log-entry.error { color: #ef4444; }
+        .log-entry.warn { color: #f59e0b; }
+        .log-entry.info { color: #38bdf8; }
+
+        /* Buttons */
+        button {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: none;
+        }
+        button.outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Map Markers */
+        .driver-marker {
+            width: 28px;
+            height: 28px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2310b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/></svg>');
+            background-size: cover;
+            background-color: white;
+            border-radius: 50%;
+            border: 2px solid #10b981;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+        .driver-marker.assigned {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/></svg>');
+            border-color: #f59e0b;
+            transform: scale(1.3);
+            z-index: 100;
+            animation: pulse 1.5s infinite;
+        }
+        .restaurant-marker {
+            width: 32px;
+            height: 32px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ef4444" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>');
+            background-size: cover;
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.5));
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: -16px; /* Offset so pin points exactly at click */
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        @keyframes bounceIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1>Ola Maps Fleet Command</h1>
+            <p>Real-time dispatch, spatial routing, and fleet orchestration engine.</p>
+        </div>
+
+        <button id="btn-spawn" onclick="spawnFleet()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            1. Spawn Virtual Fleet
+        </button>
+        
+        <div class="header" style="margin-top: 8px;">
+            <p style="color: #cbd5e1; font-weight: 500;">2. Click anywhere on the map to dispatch an order to the nearest driver.</p>
+        </div>
+
+        <div id="status-log">
+            <div class="log-entry info">System initialized. Waiting for commands...</div>
+        </div>
+
+        <button class="outline" onclick="resetMap()" style="margin-top: 8px;">Reset Map</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        let API_KEY = "";
+        const CITY_ID = "BENGALURU";
+        
+        let map;
+        let driverMarkers = {};
+        let currentRestaurantMarker = null;
+
+        async function initApp() {
+            try {
+                const res = await fetch('/api/config/maps-key');
+                const data = await res.json();
+                API_KEY = data.key;
+            } catch (err) {
+                console.error("Failed to fetch API key", err);
+                return;
+            }
+
+            // Initialize MapLibre with API Key Injection
+            map = new maplibregl.Map({
+                container: 'map',
+                style: `https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${API_KEY}`,
+                center: [77.625, 12.935], // Bengaluru Long/Lat
+                zoom: 13,
+                pitch: 45,
+                transformRequest: (url, resourceType) => {
+                    // Attach the API key to all requests going to Ola Maps
+                    if (url.includes('api.olamaps.io')) {
+                        // Prevent double appending if MapLibre retries
+                        if (url.includes('api_key=')) return { url };
+                        
+                        const separator = url.indexOf('?') === -1 ? '?' : '&';
+                        const newUrl = `${url}${separator}api_key=${API_KEY}`;
+                        console.log(`[MapLibre] Fetching ${resourceType}:`, newUrl);
+                        return { url: newUrl };
+                    }
+                    return { url };
+                }
+            });
+
+            // Add 3D Buildings (Optional visual enhancement)
+            map.on('load', () => {
+                // Ola Maps might not support 3d-buildings standardly in default-light-standard, but we can try
+            });
+
+            // 2. Dispatch Logic (Map Click)
+            map.on('click', async (e) => {
+                handleMapClick(e);
+            });
+        }
+
+        function logStatus(msg, type = "info") {
+            const log = document.getElementById('status-log');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<div class="log-entry ${type}">[${time}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 1. Spawn Fleet
+        async function spawnFleet() {
+            logStatus("Spawning virtual fleet...", "info");
+            
+            // Clear existing
+            Object.values(driverMarkers).forEach(m => m.marker.remove());
+            driverMarkers = {};
+
+            const centerLat = 12.935;
+            const centerLng = 77.625;
+
+            for (let i = 1; i <= 10; i++) {
+                const driverId = `driver-${100 + i}`;
+                // Randomize nearby coordinates (approx ~3-4km radius)
+                const lat = centerLat + (Math.random() - 0.5) * 0.05;
+                const lng = centerLng + (Math.random() - 0.5) * 0.05;
+
+                // Create marker element
+                const el = document.createElement('div');
+                el.className = 'driver-marker';
+                
+                const marker = new maplibregl.Marker(el)
+                    .setLngLat([lng, lat])
+                    .addTo(map);
+                
+                driverMarkers[driverId] = { marker, el, lat, lng };
+
+                // Register with backend (fire and forget for UI snappiness)
+                fetch('/api/fleet/location', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ cityId: CITY_ID, driverId, lat, lng })
+                });
+
+                fetch('/api/fleet/availability', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ cityId: CITY_ID, driverId, available: true })
+                });
+            }
+            logStatus("Registered 10 available drivers in Redis geo-index.", "info");
+        }
+
+        // 2. Dispatch Logic (Map Click) moved to handleMapClick
+        async function handleMapClick(e) {
+            const restLng = e.lngLat.lng;
+            const restLat = e.lngLat.lat;
+
+            // Reset previous route
+            if (map.getLayer('route')) {
+                map.removeLayer('route');
+                map.removeSource('route');
+            }
+            // Remove previous restaurant marker
+            if (currentRestaurantMarker) {
+                currentRestaurantMarker.remove();
+            }
+            // Reset driver styles
+            Object.values(driverMarkers).forEach(d => d.el.classList.remove('assigned'));
+
+            // Drop Restaurant Marker
+            const restEl = document.createElement('div');
+            restEl.className = 'restaurant-marker';
+            currentRestaurantMarker = new maplibregl.Marker(restEl)
+                .setLngLat([restLng, restLat])
+                .addTo(map);
+
+            logStatus(`Order placed at ${restLat.toFixed(4)}, ${restLng.toFixed(4)}`, "info");
+            logStatus(`Dispatching to nearest available driver...`, "info");
+
+            try {
+                // Call Dispatch API
+                const dispatchRes = await fetch('/api/logistics/dispatch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        cityId: CITY_ID,
+                        restaurantCoords: `${restLat},${restLng}`
+                    })
+                });
+
+                const dispatchData = await dispatchRes.json();
+
+                if (!dispatchData.success || !dispatchData.driverId) {
+                    logStatus("No available drivers found nearby!", "error");
+                    return;
+                }
+
+                const driverId = dispatchData.driverId;
+                logStatus(`Driver ${driverId} atomically assigned!`, "info");
+
+                // Highlight Driver
+                if (driverMarkers[driverId]) {
+                    driverMarkers[driverId].el.classList.add('assigned');
+                    const dLat = driverMarkers[driverId].lat;
+                    const dLng = driverMarkers[driverId].lng;
+
+                    // Fetch Route
+                    logStatus("Fetching turn-by-turn route...", "info");
+                    const routeRes = await fetch(`/api/logistics/route?origin=${dLat},${dLng}&destination=${restLat},${restLng}`);
+                    const routeData = await routeRes.json();
+
+                    if (routeData.polyline) {
+                        logStatus(`Route found! ETA: ${routeData.duration} (${routeData.distance} km)`, "info");
+                        drawRoute(routeData.polyline);
+                    } else {
+                        logStatus("No route polyline returned.", "warn");
+                    }
+                }
+
+            } catch (err) {
+                logStatus("Error during dispatch: " + err.message, "error");
+            }
+        }
+
+        // Polyline Decoder
+        function decodePolyline(encoded) {
+            let points = [];
+            let index = 0, len = encoded.length;
+            let lat = 0, lng = 0;
+            while (index < len) {
+                let b, shift = 0, result = 0;
+                do {
+                    b = encoded.charCodeAt(index++) - 63;
+                    result |= (b & 0x1f) << shift;
+                    shift += 5;
+                } while (b >= 0x20);
+                let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                lat += dlat;
+                shift = 0;
+                result = 0;
+                do {
+                    b = encoded.charCodeAt(index++) - 63;
+                    result |= (b & 0x1f) << shift;
+                    shift += 5;
+                } while (b >= 0x20);
+                let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                lng += dlng;
+                points.push([lng / 1e5, lat / 1e5]); // [lng, lat] for GeoJSON
+            }
+            return points;
+        }
+
+        // Draw Route on Map
+        function drawRoute(encodedPolyline) {
+            const coordinates = decodePolyline(encodedPolyline);
+
+            if (map.getSource('route')) {
+                map.getSource('route').setData({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'LineString', coordinates: coordinates }
+                });
+            } else {
+                map.addSource('route', {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: { type: 'LineString', coordinates: coordinates }
+                    }
+                });
+
+                map.addLayer({
+                    id: 'route',
+                    type: 'line',
+                    source: 'route',
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': '#3b82f6',
+                        'line-width': 5,
+                        'line-opacity': 0.8
+                    }
+                });
+            }
+
+            // Fit bounds to route
+            const bounds = coordinates.reduce((b, coord) => {
+                return b.extend(coord);
+            }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+            
+            map.fitBounds(bounds, { padding: 80, duration: 1000 });
+        }
+
+        function resetMap() {
+            Object.values(driverMarkers).forEach(m => m.marker.remove());
+            driverMarkers = {};
+            if (currentRestaurantMarker) {
+                currentRestaurantMarker.remove();
+                currentRestaurantMarker = null;
+            }
+            if (map.getLayer('route')) {
+                map.removeLayer('route');
+                map.removeSource('route');
+            }
+            document.getElementById('status-log').innerHTML = '<div class="log-entry info">System initialized. Waiting for commands...</div>';
+            map.flyTo({ center: [77.625, 12.935], zoom: 13, pitch: 45 });
+        }
+
+    </script>
+</body>
+</html>

@@ -88,4 +88,54 @@ public class IntegrationController {
         response.put("success", true);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/fleet/available")
+    public ResponseEntity<?> getAvailableDrivers(@RequestParam String cityId) {
+        java.util.Set<String> drivers = fleetTrackingService.getAvailableDrivers(cityId);
+        return ResponseEntity.ok(drivers);
+    }
+
+    @PostMapping("/fleet/location")
+    public ResponseEntity<?> updateLocation(@RequestBody Map<String, Object> payload) {
+        String cityId = (String) payload.get("cityId");
+        String driverId = (String) payload.get("driverId");
+        
+        if (cityId == null || driverId == null || !payload.containsKey("lat") || !payload.containsKey("lng")) {
+            return ResponseEntity.badRequest().body("cityId, driverId, lat, and lng are required");
+        }
+        
+        Double lat = Double.parseDouble(payload.get("lat").toString());
+        Double lng = Double.parseDouble(payload.get("lng").toString());
+
+        fleetTrackingService.updateDriverLocation(cityId, driverId, lat, lng);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/fleet/nearby")
+    public ResponseEntity<?> getNearbyDrivers(
+            @RequestParam String cityId,
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "5.0") double radius) {
+        return ResponseEntity.ok(fleetTrackingService.getNearbyDrivers(cityId, lat, lng, radius));
+    }
+
+    @GetMapping("/fleet/location")
+    public ResponseEntity<?> getDriverLocation(
+            @RequestParam String cityId,
+            @RequestParam String driverId) {
+        Map<String, Double> location = fleetTrackingService.getDriverLocation(cityId, driverId);
+        if (location == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(location);
+    }
+    @GetMapping("/config/maps-key")
+    public ResponseEntity<?> getMapsKey() {
+        Map<String, String> response = new HashMap<>();
+        response.put("key", System.getenv("OLA_MAPS_API_KEY"));
+        return ResponseEntity.ok(response);
+    }
 }

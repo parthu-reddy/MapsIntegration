@@ -31,11 +31,13 @@ public class FleetTrackingService {
         this.dispatchService = dispatchService;
     }
 
+    @Tool(description = "Update the real-time geographical location coordinates (latitude and longitude) of a driver in the city.")
     public void updateDriverLocation(String cityId, String driverId, double lat, double lng) {
         String key = "drivers:geo:" + cityId;
         redisTemplate.opsForGeo().add(key, new Point(lng, lat), driverId);
     }
 
+    @Tool(description = "Set or update the availability status of a driver. If true, the driver is ready to accept orders.")
     public void setDriverAvailability(String cityId, String driverId, boolean available) {
         String key = "drivers:available:" + cityId;
         if (available) {
@@ -43,6 +45,54 @@ public class FleetTrackingService {
         } else {
             redisTemplate.opsForSet().remove(key, driverId);
         }
+    }
+
+    @Tool(description = "Retrieve a list of all currently available drivers (driver IDs) in a specific city who are ready to accept orders.")
+    public java.util.Set<String> getAvailableDrivers(String cityId) {
+        String key = "drivers:available:" + cityId;
+        return redisTemplate.opsForSet().members(key);
+    }
+
+    @Tool(description = "Retrieve the top 10 nearest drivers to a specific location (latitude and longitude) within a given radius in kilometers.")
+    public List<Map<String, Object>> getNearbyDrivers(String cityId, double lat, double lng, double radiusKm) {
+        String geoKey = "drivers:geo:" + cityId;
+        Circle circle = new Circle(new Point(lng, lat), new Distance(radiusKm, org.springframework.data.geo.Metrics.KILOMETERS));
+        RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs()
+                .includeDistance()
+                .includeCoordinates()
+                .sortAscending()
+                .limit(10);
+                
+        GeoResults<RedisGeoCommands.GeoLocation<String>> results = redisTemplate.opsForGeo().radius(geoKey, circle, args);
+        
+        List<Map<String, Object>> drivers = new ArrayList<>();
+        if (results != null) {
+            for (GeoResult<RedisGeoCommands.GeoLocation<String>> result : results) {
+                Map<String, Object> driverData = new java.util.HashMap<>();
+                driverData.put("driverId", result.getContent().getName());
+                driverData.put("distanceKm", result.getDistance().getValue());
+                
+                Point point = result.getContent().getPoint();
+                if (point != null) {
+                    driverData.put("lat", point.getY());
+                    driverData.put("lng", point.getX());
+                }
+                
+                drivers.add(driverData);
+            }
+        }
+        return drivers;
+    }
+
+    @Tool(description = "Get the exact current geographical coordinates (latitude and longitude) of a specific driver.")
+    public Map<String, Double> getDriverLocation(String cityId, String driverId) {
+        String geoKey = "drivers:geo:" + cityId;
+        List<Point> points = redisTemplate.opsForGeo().position(geoKey, driverId);
+        if (points != null && !points.isEmpty() && points.get(0) != null) {
+            Point point = points.get(0);
+            return Map.of("lat", point.getY(), "lng", point.getX());
+        }
+        return null;
     }
 
     @Tool(description = "Dispatch an order to the nearest available driver based on the restaurant's coordinates within a city. Finds drivers in a 5km radius, filters by availability, sorts by driving ETA, and atomically assigns the order using a Redis distributed lock.")

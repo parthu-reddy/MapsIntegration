@@ -22,9 +22,14 @@ public class OlaMapsClientConfig {
     @Value("${olamaps.api.key}")
     private String apiKey;
 
+    @Value("${olamaps.api.base-url:https://api.olamaps.io}")
+    private String baseUrl;
+
     @Bean
     public RestTemplate olaMapsRestTemplate() {
         RestTemplate restTemplate = new RestTemplate();
+        org.springframework.web.util.DefaultUriBuilderFactory defaultUriBuilderFactory = new org.springframework.web.util.DefaultUriBuilderFactory(baseUrl);
+        restTemplate.setUriTemplateHandler(defaultUriBuilderFactory);
         restTemplate.getInterceptors().add(new OlaMapsAuthInterceptor(apiKey));
         return restTemplate;
     }

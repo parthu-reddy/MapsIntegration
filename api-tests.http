@@ -1,0 +1,66 @@
+### Start Infrastructure
+# Run this in your terminal first:
+# docker-compose up -d
+# ./mvnw spring-boot:run
+
+### 1. Test Places Autocomplete
+GET http://localhost:8080/api/places/autocomplete?input=Koramangala&lat=12.9904909&lng=77.6702519
+Accept: application/json
+
+### 2. Test Reverse Geocoding
+GET http://localhost:8080/api/places/reverse-geocode?lat=12.9904909&lng=77.6702519
+Accept: application/json
+
+### 3. Mark a Driver as Available
+# First we need to tell Redis that a driver is online and ready for orders
+POST http://localhost:8080/api/fleet/availability
+Content-Type: application/json
+
+{
+  "cityId": "BENGALURU",
+  "driverId": "driver-123",
+  "available": true
+}
+
+### 4. Dispatch an Order
+# This will try to find the nearest driver in a 5km radius to the restaurant coords
+# NOTE: This requires driver telemetry to be in Redis first (via WebSockets or manual Redis insertion)
+POST http://localhost:8080/api/logistics/dispatch
+Content-Type: application/json
+
+{
+  "cityId": "BENGALURU",
+  "restaurantCoords": "12.934533,77.626579"
+}
+
+### 5. Turn-by-Turn Routing (Directions API)
+GET http://localhost:8080/api/logistics/route?origin=12.934533,77.626579&destination=12.9715987,77.5945627
+Accept: application/json
+
+### 6. Test Model Context Protocol (MCP) Server SSE Endpoint
+# This endpoint is what LLMs and AI Agents connect to
+GET http://localhost:8080/mcp/sse
+Accept: text/event-stream
+
+### 7. Get All Available Drivers
+GET http://localhost:8080/api/fleet/available?cityId=BENGALURU
+Accept: application/json
+
+### 8. Update Driver Location (Simulate a driver near the restaurant)
+POST http://localhost:8080/api/fleet/location
+Content-Type: application/json
+
+{
+  "cityId": "BENGALURU",
+  "driverId": "driver-123",
+  "lat": 12.935000,
+  "lng": 77.625000
+}
+
+### 9. Get Top 10 Nearby Drivers
+GET http://localhost:8080/api/fleet/nearby?cityId=BENGALURU&lat=12.934533&lng=77.626579&radius=5.0
+Accept: application/json
+
+### 10. Get Specific Driver Location
+GET http://localhost:8080/api/fleet/location?cityId=BENGALURU&driverId=driver-123
+Accept: application/json
