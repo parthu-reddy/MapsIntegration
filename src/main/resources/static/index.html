@@ -8,6 +8,9 @@
     <!-- MapLibre GL JS -->
     <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+    
+    <!-- Ola Maps Web SDK v2 -->
+    <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -215,32 +218,21 @@
                 return;
             }
 
-            // Initialize MapLibre with API Key Injection
-            map = new maplibregl.Map({
-                container: 'map',
-                style: `https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${API_KEY}`,
-                center: [77.625, 12.935], // Bengaluru Long/Lat
-                zoom: 13,
-                pitch: 45,
-                transformRequest: (url, resourceType) => {
-                    // Attach the API key to all requests going to Ola Maps
-                    if (url.includes('api.olamaps.io')) {
-                        // Prevent double appending if MapLibre retries
-                        if (url.includes('api_key=')) return { url };
-                        
-                        const separator = url.indexOf('?') === -1 ? '?' : '&';
-                        const newUrl = `${url}${separator}api_key=${API_KEY}`;
-                        console.log(`[MapLibre] Fetching ${resourceType}:`, newUrl);
-                        return { url: newUrl };
-                    }
-                    return { url };
-                }
+            // Initialize Official Ola Maps Web SDK
+            const olaMaps = new window.OlaMaps({
+                apiKey: API_KEY,
             });
 
-            // Add 3D Buildings (Optional visual enhancement)
-            map.on('load', () => {
-                // Ola Maps might not support 3d-buildings standardly in default-light-standard, but we can try
+            map = await olaMaps.init({
+                style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
+                container: 'map',
+                center: [77.625, 12.935], // Bengaluru Long/Lat
+                zoom: 13,
             });
+
+            // 3D Buildings (SDK supports this naturally with mode: '3d')
+            // Wait for map load if necessary, though init() awaits it.
+
 
             // 2. Dispatch Logic (Map Click)
             map.on('click', async (e) => {
