@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.ai.tool.annotation.Tool;
 
 @Service
 public class FleetTrackingService {
@@ -44,6 +45,7 @@ public class FleetTrackingService {
         }
     }
 
+    @Tool(description = "Dispatch an order to the nearest available driver based on the restaurant's coordinates within a city. Finds drivers in a 5km radius, filters by availability, sorts by driving ETA, and atomically assigns the order using a Redis distributed lock.")
     public String dispatchOrder(String cityId, String restaurantCoords) {
         String[] coords = restaurantCoords.split(",");
         double restLat = Double.parseDouble(coords[0]);

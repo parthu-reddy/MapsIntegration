@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.ai.tool.annotation.Tool;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +20,7 @@ public class LocationService {
         this.restTemplate = olaMapsRestTemplate;
     }
 
+    @Tool(description = "Get autocomplete suggestions for a given input query using Ola Maps Places API. Useful for finding location names.")
     public List<Map<String, Object>> getAutocompleteSuggestions(String input, Double userLat, Double userLng) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/places/v1/autocomplete")
                 .queryParam("input", input);
@@ -38,6 +40,7 @@ public class LocationService {
         return Collections.emptyList();
     }
 
+    @Tool(description = "Resolve latitude and longitude coordinates into a human-readable street address using Ola Maps Reverse Geocoding API.")
     public String resolveCoordinatesToAddress(double lat, double lng) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/places/v1/reverse-geocode")
                 .queryParam("latlng", lat + "," + lng);

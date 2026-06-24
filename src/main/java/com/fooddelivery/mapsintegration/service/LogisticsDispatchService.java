@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.ai.tool.annotation.Tool;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,6 +22,7 @@ public class LogisticsDispatchService {
         this.restTemplate = olaMapsRestTemplate;
     }
 
+    @Tool(description = "Evaluate driver estimated time of arrivals (ETAs) by querying the Ola Maps Routing API for driving distance matrix between candidates and the restaurant.")
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "evaluateDriverETAsFallback")
     public List<Map<String, Object>> evaluateDriverETAs(List<String> candidateCoordinates, String restaurantCoords) {
         if (candidateCoordinates == null || candidateCoordinates.isEmpty()) {
@@ -68,6 +70,7 @@ public class LogisticsDispatchService {
         return results;
     }
 
+    @Tool(description = "Generate turn-by-turn routing directions between an origin and a destination using Ola Maps Directions API.")
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "generateTurnByTurnDirectionsFallback")
     public Map<String, Object> generateTurnByTurnDirections(String origin, String destination) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/routing/v1/directions")
