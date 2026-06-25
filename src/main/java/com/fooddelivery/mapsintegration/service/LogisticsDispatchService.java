@@ -30,13 +30,11 @@ public class LogisticsDispatchService {
         }
 
         String origins = String.join("|", candidateCoordinates);
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/routing/v1/distanceMatrix")
-                .queryParam("origins", origins)
-                .queryParam("destinations", restaurantCoords)
-                .queryParam("mode", "driving")
-                .queryParam("route_preference", "fastest");
+        String uriString = "/routing/v1/distanceMatrix?origins=" + origins + 
+                "&destinations=" + restaurantCoords + 
+                "&mode=driving&route_preference=fastest";
 
-        Map<String, Object> response = restTemplate.getForObject(builder.toUriString(), Map.class);
+        Map<String, Object> response = restTemplate.getForObject(uriString, Map.class);
         List<Map<String, Object>> results = new ArrayList<>();
         
         if (response != null && response.containsKey("rows")) {

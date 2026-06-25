@@ -30,20 +30,11 @@ async function initApp() {
     }
 
     try {
-        // Fetch and modify the style JSON to remove the offending 3d_model_data layer
-        // which causes a MapLibre validation error in the console.
-        const styleRes = await fetch(`https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=${apiKey}`);
-        if (!styleRes.ok) throw new Error(`Style fetch failed: ${styleRes.status}`);
-        const styleJson = await styleRes.json();
-        
-        // Strip out the broken layer
-        if (styleJson.layers) {
-            styleJson.layers = styleJson.layers.filter(layer => layer.id !== '3d_model_data');
-        }
+        const styleUrl = "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json";
 
         const olaMaps = new window.OlaMaps({ apiKey });
         mapInstance = await olaMaps.init({
-            style: styleJson,
+            style: styleUrl,
             container: 'map',
             center: [CENTER_LNG, CENTER_LAT],
             zoom: 13,
@@ -181,14 +172,14 @@ async function handleMapClick(e) {
             })
         });
 
-        if (!dispatchRes.ok) {
+        if (!dispatchRes.ok && dispatchRes.status !== 404) {
             throw new Error(`Dispatch API returned ${dispatchRes.status}`);
         }
 
         const dispatchData = await dispatchRes.json();
 
         if (!dispatchData.success || !dispatchData.driverId) {
-            logStatus("No available drivers found nearby!", "error");
+            logStatus("No available drivers found nearby! (Please reset map)", "error");
             return;
         }
 
@@ -296,19 +287,26 @@ function drawRoute(encodedPolyline) {
                 'line-cap': 'round'
             },
             paint: {
-                'line-color': '#3b82f6',
+                'line-color': '#8b5cf6', /* Purple to contrast with drivers */
                 'line-width': 5,
                 'line-opacity': 0.8
             }
         });
     }
 
-    // Fit bounds to route
-    const bounds = coordinates.reduce((b, coord) => {
-        return b.extend(coord);
-    }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
-    
-    mapInstance.fitBounds(bounds, { padding: 80, duration: 1000 });
+    // Calculate bounding box for route using plain arrays to avoid SDK prototype mismatches
+    if (coordinates.length > 0) {
+        let minLng = coordinates[0][0], minLat = coordinates[0][1];
+        let maxLng = coordinates[0][0], maxLat = coordinates[0][1];
+        for (let i = 1; i < coordinates.length; i++) {
+            minLng = Math.min(minLng, coordinates[i][0]);
+            minLat = Math.min(minLat, coordinates[i][1]);
+            maxLng = Math.max(maxLng, coordinates[i][0]);
+            maxLat = Math.max(maxLat, coordinates[i][1]);
+        }
+        
+        mapInstance.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 80, duration: 1000 });
+    }
 }
 
 /**

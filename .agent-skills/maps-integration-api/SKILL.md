@@ -40,7 +40,7 @@ Default local environment runs on: `http://localhost:8080`
 }
 ```
 **Response (Success 200)**: `{ "success": true, "driverId": "uuid-of-driver", "message": "..." }`
-**Response (Error 404)**: `{ "success": false, "message": "No drivers available." }`
+**Response (Error 404)**: `{ "success": false, "message": "No drivers available." }` (Expected when all drivers are currently assigned or none are spawned. The frontend should handle this gracefully.)
 
 ### 4. Turn-by-Turn Routing
 **Endpoint**: `GET /api/logistics/route`
@@ -48,6 +48,8 @@ Default local environment runs on: `http://localhost:8080`
 **Query Parameters**:
 - `origin` (String, required): "lat,lng"
 - `destination` (String, required): "lat,lng"
+
+*Note: Internally this API calls Ola Maps Distance Matrix API, which returns an array `[{...}]` for multiple origins rather than a traditional `{ rows: [...] }` object.*
 
 ### 5. Set Driver Availability
 **Endpoint**: `POST /api/fleet/availability`

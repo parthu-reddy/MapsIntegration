@@ -53,21 +53,21 @@ public class OlaMapsClientConfig {
                 headers.set("x-correlation-id", UUID.randomUUID().toString());
             }
 
-            URI uri = UriComponentsBuilder.fromUri(request.getURI())
-                    .queryParam("api_key", apiKey)
-                    .build()
-                    .toUri();
+            URI originalUri = request.getURI();
+            String appendStr = (originalUri.getRawQuery() == null ? "?" : "&") + "api_key=" + apiKey;
+            URI newUri = URI.create(originalUri.toString() + appendStr);
 
             HttpRequest modifiedRequest = new HttpRequestWrapper(request) {
                 @Override
                 public URI getURI() {
-                    return uri;
+                    return newUri;
                 }
                 @Override
                 public HttpHeaders getHeaders() {
                     return headers;
                 }
             };
+            System.out.println("Executing OLA Maps Request: " + newUri.toString());
 
             return execution.execute(modifiedRequest, body);
         }
