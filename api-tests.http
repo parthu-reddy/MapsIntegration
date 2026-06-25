@@ -64,3 +64,7 @@ Accept: application/json
 ### 10. Get Specific Driver Location
 GET http://localhost:8080/api/fleet/location?cityId=BENGALURU&driverId=driver-123
 Accept: application/json
+
+### 11. Delete a Driver (Simulate driver going offline permanently)
+DELETE http://localhost:8080/api/fleet/driver?cityId=BENGALURU&driverId=driver-123
+Accept: application/json

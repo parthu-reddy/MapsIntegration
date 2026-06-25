@@ -53,6 +53,15 @@ public class FleetTrackingService {
         return redisTemplate.opsForSet().members(key);
     }
 
+    @Tool(description = "Delete a driver entirely from the system when they go offline permanently.")
+    public void deleteDriver(String cityId, String driverId) {
+        String geoKey = "drivers:geo:" + cityId;
+        String availKey = "drivers:available:" + cityId;
+        
+        redisTemplate.opsForGeo().remove(geoKey, driverId);
+        redisTemplate.opsForSet().remove(availKey, driverId);
+    }
+
     @Tool(description = "Retrieve the top 10 nearest drivers to a specific location (latitude and longitude) within a given radius in kilometers.")
     public List<Map<String, Object>> getNearbyDrivers(String cityId, double lat, double lng, double radiusKm) {
         String geoKey = "drivers:geo:" + cityId;

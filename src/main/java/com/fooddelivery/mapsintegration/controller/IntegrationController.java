@@ -138,4 +138,14 @@ public class IntegrationController {
         response.put("key", System.getenv("OLA_MAPS_API_KEY"));
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/fleet/driver")
+    public ResponseEntity<?> deleteDriver(
+            @RequestParam String cityId,
+            @RequestParam String driverId) {
+        fleetTrackingService.deleteDriver(cityId, driverId);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
 }
