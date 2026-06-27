@@ -38,11 +38,13 @@ We avoid constantly writing high-frequency driver locations to PostgreSQL. Inste
 This service aggregates nearby drivers and queries the Ola Maps Distance Matrix API to calculate true routing ETAs.
 - **Circuit Breaker**: Uses `@CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "...")`.
 - **Fallback**: If the Ola Maps routing engine goes offline or times out, the circuit breaker opens and falls back to a mathematical **Haversine** distance calculation.
+- **Caching**: Ola Maps API responses are cached in Redis using a 30-second TTL. The cache key is deterministic based on the candidate origins, preventing redundant calls when multiple customers track drivers in identical bounds.
 
 ### 5. WebSocket Ingestion (`websocket/TrackingWebSocketHandler.java`)
 A massive amount of driver pings is handled by `TextWebSocketHandler`.
-- **Buffer Optimization**: It buffers the location pings in a `ConcurrentHashMap`. 
-- **Flushing**: A `ScheduledExecutorService` takes a snapshot of the buffer and flushes it to Redis every 500ms. If you notice latency in driver positions, verify the executor thread health.
+- **Reactive Backpressure**: Utilizes **Project Reactor** (`Sinks.Many` and `Flux`) to reactively ingest location pings.
+- **Flushing**: The stream uses `.bufferTimeout(1000, 500ms)` and `.publishOn(Schedulers.boundedElastic())` to batch flush to Redis without blocking the event loop.
+- **Graceful Degradation**: `.onBackpressureDrop()` is configured to drop excess events if the system becomes entirely overloaded, preventing memory exhaustion (OOMs).
 
 ### 6. MCP Endpoints
 The service includes the `spring-ai-mcp-server-webmvc-spring-boot-starter`. Critical methods across the services are annotated with `@Tool`, exposing them via `/mcp/sse` automatically to LLMs and agents.

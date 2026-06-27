@@ -11,15 +11,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.redis.core.RedisTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 
 @Service
 public class LogisticsDispatchService {
 
     private final RestTemplate restTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public LogisticsDispatchService(RestTemplate olaMapsRestTemplate) {
+    public LogisticsDispatchService(RestTemplate olaMapsRestTemplate, RedisTemplate<String, String> redisTemplate) {
         this.restTemplate = olaMapsRestTemplate;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = new ObjectMapper();
     }
 
     @Tool(description = "Evaluate driver estimated time of arrivals (ETAs) by querying the Ola Maps Routing API for driving distance matrix between candidates and the restaurant.")
@@ -30,6 +37,18 @@ public class LogisticsDispatchService {
         }
 
         String origins = String.join("|", candidateCoordinates);
+        
+        String cacheKey = "eta:matrix:" + origins.hashCode() + ":" + restaurantCoords.hashCode();
+        try {
+            String cachedResponse = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedResponse != null) {
+                System.out.println("Cache hit for distance matrix! Key: " + cacheKey);
+                return objectMapper.readValue(cachedResponse, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>(){});
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to read from cache: " + e.getMessage());
+        }
+
         String uriString = "/routing/v1/distanceMatrix?origins=" + origins + 
                 "&destinations=" + restaurantCoords + 
                 "&mode=driving&route_preference=fastest";
@@ -46,6 +65,16 @@ public class LogisticsDispatchService {
                 }
             }
         }
+        
+        try {
+            if (!results.isEmpty()) {
+                String serialized = objectMapper.writeValueAsString(results);
+                redisTemplate.opsForValue().set(cacheKey, serialized, Duration.ofSeconds(30));
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to write to cache: " + e.getMessage());
+        }
+
         return results;
     }
 

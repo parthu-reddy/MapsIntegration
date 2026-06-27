@@ -12,19 +12,18 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import reactor.core.publisher.Sinks;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Map<String, LocationUpdate> locationBuffer = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final Sinks.Many<LocationUpdate> sink = Sinks.many().unicast().onBackpressureBuffer();
 
     @Autowired
     public TrackingWebSocketHandler(FleetTrackingService fleetTrackingService) {
@@ -33,13 +32,16 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     @PostConstruct
     public void init() {
-        // Flush buffer every 500ms
-        scheduler.scheduleAtFixedRate(this::flushBuffer, 500, 500, TimeUnit.MILLISECONDS);
+        sink.asFlux()
+            .onBackpressureDrop(update -> System.err.println("Dropped location ping due to backpressure: " + update.driverId))
+            .bufferTimeout(1000, Duration.ofMillis(500))
+            .publishOn(reactor.core.scheduler.Schedulers.boundedElastic())
+            .subscribe(this::flushBatch);
     }
 
     @PreDestroy
     public void destroy() {
-        scheduler.shutdown();
+        // Nothing to explicitly destroy for the sink
     }
 
     @Override
@@ -58,8 +60,7 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
                 double lat = payload.get("lat").asDouble();
                 double lng = payload.get("lng").asDouble();
                 
-                // Buffer optimization: overwrite existing driver entry
-                locationBuffer.put(driverId, new LocationUpdate(cityId, driverId, lat, lng));
+                sink.tryEmitNext(new LocationUpdate(cityId, driverId, lat, lng));
             }
         } catch (Exception e) {
             System.err.println("Failed to parse WebSocket message: " + e.getMessage());
@@ -71,14 +72,16 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
         System.out.println("Driver WebSocket connection closed: " + session.getId());
     }
 
-    private void flushBuffer() {
-        if (locationBuffer.isEmpty()) return;
+    private void flushBatch(List<LocationUpdate> batch) {
+        if (batch.isEmpty()) return;
 
-        // Take a snapshot and clear
-        Map<String, LocationUpdate> snapshot = new ConcurrentHashMap<>(locationBuffer);
-        locationBuffer.keySet().removeAll(snapshot.keySet());
+        // Deduplicate in batch (keep latest per driver)
+        Map<String, LocationUpdate> deduped = new HashMap<>();
+        for (LocationUpdate update : batch) {
+            deduped.put(update.driverId, update);
+        }
 
-        snapshot.values().forEach(update -> {
+        deduped.values().forEach(update -> {
             try {
                 fleetTrackingService.updateDriverLocation(update.cityId, update.driverId, update.lat, update.lng);
             } catch (Exception e) {

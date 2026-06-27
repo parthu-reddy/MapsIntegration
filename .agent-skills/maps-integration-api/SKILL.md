@@ -70,7 +70,14 @@ Default local environment runs on: `http://localhost:8080`
 - `cityId` (String, required)
 - `driverId` (String, required)
 
-### 7. Get Nearby Drivers
+### 7. Delete Driver
+**Endpoint**: `DELETE /api/fleet/driver`
+**Purpose**: Delete a driver entirely from the system if they go offline permanently.
+**Query Parameters**:
+- `cityId` (String, required)
+- `driverId` (String, required)
+
+### 8. Get Nearby Drivers
 **Endpoint**: `GET /api/fleet/nearby`
 **Purpose**: Fetch up to 10 nearby available drivers.
 **Query Parameters**:
