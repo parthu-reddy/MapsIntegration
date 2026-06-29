@@ -1,13 +1,25 @@
-# Maps Integration (Geospatial & Routing)
+# Maps Integration
 
-The Maps Integration service is a decoupled microservice responsible for interacting with external geospatial and routing APIs (e.g., Google Maps, Mapbox).
+The Maps Integration service is responsible for geospatial intelligence in the Food Delivery platform. It wraps external mapping providers (such as Ola Maps, Google Maps, Mapbox) to provide routing, distance calculation, and ETA predictions.
 
-## Key Responsibilities
-- Calculates ETAs, distances, and optimal routes for delivery.
-- Listens to `logistics-dispatch` events to help the Delivery Executive Application determine the closest available driver by calculating true road distances rather than 'as-the-crow-flies' distances.
+## Responsibilities
 
-## Running Locally
+1. **Routing**: Calculates optimal routes between restaurants, delivery executives, and customers.
+2. **ETA Calculation**: Provides real-time ETAs for deliveries based on traffic and distance.
+3. **Geocoding**: Converts raw customer addresses into accurate latitude and longitude coordinates.
 
-```bash
-./mvnw spring-boot:run
+## Integration Architecture
+
+```mermaid
+graph TD
+    DelApp[Delivery Executive Application] -->|Requests nearest driver| MapsApp
+    CustApp[Customer Application] -->|Requests ETA| MapsApp
+    
+    MapsApp[Maps Integration Service] -->|REST API| OlaMaps(Ola Maps API)
+    MapsApp -->|REST API| Google(Google Maps API)
+    MapsApp -->|REST API| Mapbox(Mapbox API)
 ```
+
+## Setup
+
+Run `mvn spring-boot:run` to start the Maps Integration service. Make sure external API keys are configured in your environment properties.
