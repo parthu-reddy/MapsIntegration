@@ -44,14 +44,26 @@ public class DispatchEventConsumer {
                         "driverId", driverId,
                         "eventType", "DRIVER_ASSIGNED"
                 );
-                kafkaTemplate.send("order-events", orderId, objectMapper.writeValueAsString(eventPayload));
+                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
+                        .withPayload(objectMapper.writeValueAsString(eventPayload))
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, "order-events")
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
+                        .setHeader("eventType", "DRIVER_ASSIGNED")
+                        .build();
+                kafkaTemplate.send(message);
             } else {
                 logger.warn("No drivers available for order {}", orderId);
                 java.util.Map<String, Object> eventPayload = java.util.Map.of(
                         "orderId", orderId,
                         "eventType", "DISPATCH_FAILED"
                 );
-                kafkaTemplate.send("order-events", orderId, objectMapper.writeValueAsString(eventPayload));
+                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
+                        .withPayload(objectMapper.writeValueAsString(eventPayload))
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, "order-events")
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
+                        .setHeader("eventType", "DISPATCH_FAILED")
+                        .build();
+                kafkaTemplate.send(message);
             }
         } catch (Exception e) {
             logger.error("Failed to process dispatch event", e);
