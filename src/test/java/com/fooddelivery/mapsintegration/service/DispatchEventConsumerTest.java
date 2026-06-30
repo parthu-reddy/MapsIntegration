@@ -52,7 +52,7 @@ class DispatchEventConsumerTest {
         Message<String> message = messageCaptor.getValue();
         assertThat(message.getPayload()).contains(orderId);
         assertThat(message.getPayload()).contains(driverId);
-        assertThat(message.getPayload()).contains("DRIVER_ASSIGNED");
+        assertThat(message.getPayload()).contains("DISPATCH_CANDIDATE_FOUND");
     }
 
     @Test

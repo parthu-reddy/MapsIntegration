@@ -42,13 +42,13 @@ public class DispatchEventConsumer {
                 java.util.Map<String, Object> eventPayload = java.util.Map.of(
                         "orderId", orderId,
                         "driverId", driverId,
-                        "eventType", "DRIVER_ASSIGNED"
+                        "eventType", "DISPATCH_CANDIDATE_FOUND"
                 );
                 org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
                         .withPayload(objectMapper.writeValueAsString(eventPayload))
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, "order-events")
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
-                        .setHeader("eventType", "DRIVER_ASSIGNED")
+                        .setHeader("eventType", "DISPATCH_CANDIDATE_FOUND")
                         .build();
                 kafkaTemplate.send(message);
             } else {

@@ -27,7 +27,10 @@ public class OlaMapsClientConfig {
 
     @Bean
     public RestTemplate olaMapsRestTemplate() {
-        RestTemplate restTemplate = new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(5000);
+        RestTemplate restTemplate = new RestTemplate(factory);
         org.springframework.web.util.DefaultUriBuilderFactory defaultUriBuilderFactory = new org.springframework.web.util.DefaultUriBuilderFactory(baseUrl);
         restTemplate.setUriTemplateHandler(defaultUriBuilderFactory);
         restTemplate.getInterceptors().add(new OlaMapsAuthInterceptor(apiKey));
