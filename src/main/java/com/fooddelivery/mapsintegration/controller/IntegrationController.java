@@ -95,6 +95,18 @@ public class IntegrationController {
         return ResponseEntity.ok(drivers);
     }
 
+    @GetMapping("/fleet/availability/check")
+    public ResponseEntity<?> checkDriverAvailability(
+            @RequestParam String cityId,
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = com.fooddelivery.common.constants.AppConstants.MAX_DELIVERY_RADIUS_KM_STR) double radius) {
+        boolean available = fleetTrackingService.hasAvailableDriversNearby(cityId, lat, lng, radius);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("available", available);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/fleet/location")
     public ResponseEntity<?> updateLocation(@RequestBody Map<String, Object> payload) {
         String cityId = (String) payload.get("cityId");
@@ -118,7 +130,7 @@ public class IntegrationController {
             @RequestParam String cityId,
             @RequestParam double lat,
             @RequestParam double lng,
-            @RequestParam(defaultValue = "5.0") double radius) {
+            @RequestParam(defaultValue = com.fooddelivery.common.constants.AppConstants.MAX_DELIVERY_RADIUS_KM_STR) double radius) {
         return ResponseEntity.ok(fleetTrackingService.getNearbyDrivers(cityId, lat, lng, radius));
     }
 

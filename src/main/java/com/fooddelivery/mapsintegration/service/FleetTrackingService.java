@@ -114,7 +114,7 @@ public class FleetTrackingService {
         String availKey = "drivers:available:" + cityId;
 
         // 1. Spatial Filtering
-        Circle circle = new Circle(new Point(restLng, restLat), new Distance(5, org.springframework.data.geo.Metrics.KILOMETERS));
+        Circle circle = new Circle(new Point(restLng, restLat), new Distance(com.fooddelivery.common.constants.AppConstants.MAX_DELIVERY_RADIUS_KM, org.springframework.data.geo.Metrics.KILOMETERS));
         RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs().includeCoordinates();
         GeoResults<RedisGeoCommands.GeoLocation<String>> nearbyDrivers = redisTemplate.opsForGeo().radius(geoKey, circle, args);
 
@@ -172,6 +172,28 @@ public class FleetTrackingService {
         }
 
         return null;
+    }
+
+    @Tool(description = "Check if there are any available drivers within a specific radius of a location.")
+    public boolean hasAvailableDriversNearby(String cityId, double lat, double lng, double radiusKm) {
+        String geoKey = "drivers:geo:" + cityId;
+        String availKey = "drivers:available:" + cityId;
+        
+        Circle circle = new Circle(new Point(lng, lat), new Distance(radiusKm, org.springframework.data.geo.Metrics.KILOMETERS));
+        RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs();
+        
+        GeoResults<RedisGeoCommands.GeoLocation<String>> nearbyDrivers = redisTemplate.opsForGeo().radius(geoKey, circle, args);
+        
+        if (nearbyDrivers != null) {
+            for (GeoResult<RedisGeoCommands.GeoLocation<String>> result : nearbyDrivers) {
+                String driverId = result.getContent().getName();
+                Boolean isAvail = redisTemplate.opsForSet().isMember(availKey, driverId);
+                if (Boolean.TRUE.equals(isAvail)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static class DriverCandidate {
