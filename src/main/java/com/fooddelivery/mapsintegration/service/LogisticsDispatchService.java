@@ -53,26 +53,28 @@ public class LogisticsDispatchService {
                 "&destinations=" + restaurantCoords + 
                 "&mode=driving&route_preference=fastest";
 
-        Map<String, Object> response = restTemplate.getForObject(uriString, Map.class);
         List<Map<String, Object>> results = new ArrayList<>();
-        
-        if (response != null && response.containsKey("rows")) {
-            List<Map<String, Object>> rows = (List<Map<String, Object>>) response.get("rows");
-            for (Map<String, Object> row : rows) {
-                List<Map<String, Object>> elements = (List<Map<String, Object>>) row.get("elements");
-                if (elements != null && !elements.isEmpty()) {
-                    results.add(elements.get(0));
+        try {
+            Map<String, Object> response = restTemplate.getForObject(uriString, Map.class);
+            if (response != null && response.containsKey("rows")) {
+                List<Map<String, Object>> rows = (List<Map<String, Object>>) response.get("rows");
+                for (Map<String, Object> row : rows) {
+                    List<Map<String, Object>> elements = (List<Map<String, Object>>) row.get("elements");
+                    if (elements != null && !elements.isEmpty()) {
+                        results.add(elements.get(0));
+                    }
                 }
             }
-        }
-        
-        try {
-            if (!results.isEmpty()) {
-                String serialized = objectMapper.writeValueAsString(results);
-                redisTemplate.opsForValue().set(cacheKey, serialized, Duration.ofSeconds(30));
+            try {
+                if (!results.isEmpty()) {
+                    String serialized = objectMapper.writeValueAsString(results);
+                    redisTemplate.opsForValue().set(cacheKey, serialized, Duration.ofSeconds(30));
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to write to cache: " + e.getMessage());
             }
         } catch (Exception e) {
-            System.err.println("Failed to write to cache: " + e.getMessage());
+            return evaluateDriverETAsFallback(candidateCoordinates, restaurantCoords, e);
         }
 
         return results;
@@ -109,23 +111,27 @@ public class LogisticsDispatchService {
                 .queryParam("language", "en")
                 .queryParam("route_preference", "fastest");
 
-        Map<String, Object> response = restTemplate.postForObject(builder.toUriString(), null, Map.class);
-        
         Map<String, Object> routeInfo = new HashMap<>();
-        if (response != null && response.containsKey("routes")) {
-            List<Map<String, Object>> routes = (List<Map<String, Object>>) response.get("routes");
-            if (!routes.isEmpty()) {
-                Map<String, Object> routeData = routes.get(0);
-                routeInfo.put("polyline", routeData.get("overview_polyline"));
-                
-                List<Map<String, Object>> legs = (List<Map<String, Object>>) routeData.get("legs");
-                if (legs != null && !legs.isEmpty()) {
-                    Map<String, Object> leg = legs.get(0);
-                    routeInfo.put("distance", leg.get("readable_distance"));
-                    routeInfo.put("duration", leg.get("readable_duration"));
-                    routeInfo.put("steps", leg.get("steps"));
+        try {
+            Map<String, Object> response = restTemplate.postForObject(builder.toUriString(), null, Map.class);
+            
+            if (response != null && response.containsKey("routes")) {
+                List<Map<String, Object>> routes = (List<Map<String, Object>>) response.get("routes");
+                if (!routes.isEmpty()) {
+                    Map<String, Object> routeData = routes.get(0);
+                    routeInfo.put("polyline", routeData.get("overview_polyline"));
+                    
+                    List<Map<String, Object>> legs = (List<Map<String, Object>>) routeData.get("legs");
+                    if (legs != null && !legs.isEmpty()) {
+                        Map<String, Object> leg = legs.get(0);
+                        routeInfo.put("distance", leg.get("readable_distance"));
+                        routeInfo.put("duration", leg.get("readable_duration"));
+                        routeInfo.put("steps", leg.get("steps"));
+                    }
                 }
             }
+        } catch (Exception e) {
+            return generateTurnByTurnDirectionsFallback(origin, destination, e);
         }
         return routeInfo;
     }
