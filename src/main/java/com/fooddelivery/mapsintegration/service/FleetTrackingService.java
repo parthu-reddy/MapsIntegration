@@ -174,7 +174,15 @@ public class FleetTrackingService {
         return null;
     }
 
+    @Tool(description = "Release a driver's lock and restore their availability in case of a dispatch failure.")
+    public void releaseDriver(String cityId, String driverId) {
+        String lockKey = "driver:lock:" + driverId;
+        redisTemplate.delete(lockKey);
+        setDriverAvailability(cityId, driverId, true);
+    }
+
     @Tool(description = "Check if there are any available drivers within a specific radius of a location.")
+
     public boolean hasAvailableDriversNearby(String cityId, double lat, double lng, double radiusKm) {
         String geoKey = "drivers:geo:" + cityId;
         String availKey = "drivers:available:" + cityId;

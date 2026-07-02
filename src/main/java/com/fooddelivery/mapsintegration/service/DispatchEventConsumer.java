@@ -57,7 +57,13 @@ public class DispatchEventConsumer {
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
                         .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND)
                         .build();
-                kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                try {
+                    kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Exception ex) {
+                    logger.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}. Releasing driver {}", orderId, driverId, ex);
+                    fleetTrackingService.releaseDriver(cityId, driverId);
+                    throw ex;
+                }
             } else {
                 logger.warn("No drivers available for order {}", orderId);
                 java.util.Map<String, Object> eventPayload = java.util.Map.of(
@@ -70,7 +76,12 @@ public class DispatchEventConsumer {
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
                         .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED)
                         .build();
-                kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                try {
+                    kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Exception ex) {
+                    logger.error("Failed to publish DISPATCH_FAILED for order {}", orderId, ex);
+                    throw ex;
+                }
             }
         } catch (Exception e) {
             logger.error("Failed to process dispatch event", e);
