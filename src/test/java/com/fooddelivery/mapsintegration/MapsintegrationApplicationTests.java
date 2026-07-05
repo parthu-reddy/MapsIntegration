@@ -2,7 +2,7 @@ package com.fooddelivery.mapsintegration;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import org.springframework.test.context.ActiveProfiles;
@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class MapsintegrationApplicationTests {
 
-    @MockitoBean
+    @MockBean
     private KafkaTemplate<String, String> kafkaTemplate;
 
 	@Test
