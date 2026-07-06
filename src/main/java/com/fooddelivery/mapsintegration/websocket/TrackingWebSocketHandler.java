@@ -46,6 +46,12 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        String userId = (String) session.getAttributes().get("userId");
+        if (userId == null) {
+            System.err.println("Unauthorized WebSocket connection attempt (missing userId in session): " + session.getId());
+            session.close(CloseStatus.NOT_ACCEPTABLE);
+            return;
+        }
         System.out.println("Driver connected to WebSocket: " + session.getId());
     }
 

@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 @RestController
 @RequestMapping("/api")
 public class IntegrationController {
@@ -29,6 +31,7 @@ public class IntegrationController {
     }
 
     @GetMapping("/places/autocomplete")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY')")
     public ResponseEntity<?> autocomplete(@RequestParam String input,
                                           @RequestParam(required = false) Double lat,
                                           @RequestParam(required = false) Double lng) {
@@ -37,6 +40,7 @@ public class IntegrationController {
     }
 
     @GetMapping("/places/reverse-geocode")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY')")
     public ResponseEntity<?> reverseGeocode(@RequestParam double lat, @RequestParam double lng) {
         String address = locationService.resolveCoordinatesToAddress(lat, lng);
         Map<String, String> response = new HashMap<>();
@@ -45,6 +49,7 @@ public class IntegrationController {
     }
 
     @PostMapping("/logistics/dispatch")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> dispatchOrder(@RequestBody Map<String, String> payload) {
         String cityId = payload.get("cityId");
         String restaurantCoords = payload.get("restaurantCoords");
@@ -68,12 +73,14 @@ public class IntegrationController {
     }
 
     @GetMapping("/logistics/route")
+    @PreAuthorize("hasAnyRole('DELIVERY', 'CUSTOMER', 'RESTAURANT')")
     public ResponseEntity<?> getRoute(@RequestParam String origin, @RequestParam String destination) {
         Map<String, Object> routeInfo = dispatchService.generateTurnByTurnDirections(origin, destination);
         return ResponseEntity.ok(routeInfo);
     }
 
     @PostMapping("/fleet/availability")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> setAvailability(@RequestBody Map<String, Object> payload) {
         String cityId = (String) payload.get("cityId");
         String driverId = (String) payload.get("driverId");
@@ -90,12 +97,14 @@ public class IntegrationController {
     }
 
     @GetMapping("/fleet/available")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> getAvailableDrivers(@RequestParam String cityId) {
         java.util.Set<String> drivers = fleetTrackingService.getAvailableDrivers(cityId);
         return ResponseEntity.ok(drivers);
     }
 
     @GetMapping("/fleet/availability/check")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> checkDriverAvailability(
             @RequestParam String cityId,
             @RequestParam double lat,
@@ -108,6 +117,7 @@ public class IntegrationController {
     }
 
     @PostMapping("/fleet/location")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> updateLocation(@RequestBody Map<String, Object> payload) {
         String cityId = (String) payload.get("cityId");
         String driverId = (String) payload.get("driverId");
@@ -126,6 +136,7 @@ public class IntegrationController {
     }
 
     @GetMapping("/fleet/nearby")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> getNearbyDrivers(
             @RequestParam String cityId,
             @RequestParam double lat,
@@ -135,6 +146,7 @@ public class IntegrationController {
     }
 
     @GetMapping("/fleet/location")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> getDriverLocation(
             @RequestParam String cityId,
             @RequestParam String driverId) {
@@ -145,6 +157,7 @@ public class IntegrationController {
         return ResponseEntity.ok(location);
     }
     @GetMapping("/config/maps-key")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY')")
     public ResponseEntity<?> getMapsKey() {
         Map<String, String> response = new HashMap<>();
         response.put("key", System.getenv("OLA_MAPS_API_KEY"));
@@ -152,6 +165,7 @@ public class IntegrationController {
     }
 
     @DeleteMapping("/fleet/driver")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> deleteDriver(
             @RequestParam String cityId,
             @RequestParam String driverId) {
