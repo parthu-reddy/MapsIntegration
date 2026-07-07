@@ -104,7 +104,7 @@ public class IntegrationController {
     }
 
     @GetMapping("/fleet/availability/check")
-    @PreAuthorize("hasRole('DELIVERY')")
+    @PreAuthorize("hasAnyRole('DELIVERY', 'CUSTOMER', 'RESTAURANT')")
     public ResponseEntity<?> checkDriverAvailability(
             @RequestParam String cityId,
             @RequestParam double lat,

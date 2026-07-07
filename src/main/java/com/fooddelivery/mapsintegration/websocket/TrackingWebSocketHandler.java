@@ -18,7 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
+@Slf4j
 public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     private final FleetTrackingService fleetTrackingService;
@@ -52,7 +55,7 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
             session.close(CloseStatus.NOT_ACCEPTABLE);
             return;
         }
-        System.out.println("Driver connected to WebSocket: " + session.getId());
+        log.info("Driver connected to WebSocket: {}", session.getId());
     }
 
     @Override
@@ -75,7 +78,7 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        System.out.println("Driver WebSocket connection closed: " + session.getId());
+        log.info("Driver WebSocket connection closed: {}", session.getId());
     }
 
     private void flushBatch(List<LocationUpdate> batch) {

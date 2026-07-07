@@ -10,7 +10,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class LocationService {
 
     private final RestTemplate restTemplate;
@@ -35,7 +38,7 @@ public class LocationService {
                 return (List<Map<String, Object>>) response.get("predictions");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to fetch autocomplete suggestions", e);
         }
         return Collections.emptyList();
     }
@@ -54,7 +57,7 @@ public class LocationService {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to resolve coordinates to address", e);
         }
         return "Address Unknown";
     }

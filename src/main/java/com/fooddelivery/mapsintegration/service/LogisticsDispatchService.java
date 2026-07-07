@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.ai.tool.annotation.Tool;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 
 @Service
+@Slf4j
 public class LogisticsDispatchService {
 
     private final RestTemplate restTemplate;
@@ -42,7 +44,7 @@ public class LogisticsDispatchService {
         try {
             String cachedResponse = redisTemplate.opsForValue().get(cacheKey);
             if (cachedResponse != null) {
-                System.out.println("Cache hit for distance matrix! Key: " + cacheKey);
+                log.debug("Cache hit for distance matrix! Key: {}", cacheKey);
                 return objectMapper.readValue(cachedResponse, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>(){});
             }
         } catch (Exception e) {

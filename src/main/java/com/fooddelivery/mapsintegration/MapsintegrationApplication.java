@@ -6,7 +6,19 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@SpringBootApplication
+@SpringBootApplication(
+    scanBasePackages = {
+        "com.fooddelivery.mapsintegration",
+        "com.fooddelivery.common.security",
+        "com.fooddelivery.common.exception",
+        "com.fooddelivery.common.config"
+    },
+    exclude = {
+    org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration.class
+})
 public class MapsintegrationApplication {
 
 	public static void main(String[] args) {

@@ -16,7 +16,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.UUID;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Configuration
+@Slf4j
 public class OlaMapsClientConfig {
 
     @Value("${olamaps.api.key}")
@@ -70,7 +73,7 @@ public class OlaMapsClientConfig {
                     return headers;
                 }
             };
-            System.out.println("Executing OLA Maps Request: " + newUri.toString());
+            log.debug("Executing OLA Maps Request: {}", newUri.toString());
 
             return execution.execute(modifiedRequest, body);
         }
