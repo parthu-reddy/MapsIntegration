@@ -40,9 +40,9 @@ public class MapsMcpService {
     @Tool(description = "Dispatch an order to an available driver. Provide cityId and restaurantCoords (lat,lng).")
     public String dispatchOrder(String cityId, String restaurantCoords) {
         try {
-            Map<String, String> payload = new HashMap<>();
-            payload.put("cityId", cityId);
-            payload.put("restaurantCoords", restaurantCoords);
+            com.fooddelivery.mapsintegration.dto.DispatchOrderRequest payload = new com.fooddelivery.mapsintegration.dto.DispatchOrderRequest();
+            payload.setCityId(cityId);
+            payload.setRestaurantCoords(restaurantCoords);
             return objectMapper.writeValueAsString(integrationController.dispatchOrder(payload).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();
@@ -61,10 +61,10 @@ public class MapsMcpService {
     @Tool(description = "Set driver availability. Provide cityId, driverId, and boolean available.")
     public String setAvailability(String cityId, String driverId, boolean available) {
         try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("cityId", cityId);
-            payload.put("driverId", driverId);
-            payload.put("available", available);
+            com.fooddelivery.mapsintegration.dto.SetAvailabilityRequest payload = new com.fooddelivery.mapsintegration.dto.SetAvailabilityRequest();
+            payload.setCityId(cityId);
+            payload.setDriverId(driverId);
+            payload.setAvailable(available);
             return objectMapper.writeValueAsString(integrationController.setAvailability(payload).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();
@@ -92,11 +92,11 @@ public class MapsMcpService {
     @Tool(description = "Update driver location. Provide cityId, driverId, lat, and lng.")
     public String updateLocation(String cityId, String driverId, double lat, double lng) {
         try {
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("cityId", cityId);
-            payload.put("driverId", driverId);
-            payload.put("lat", lat);
-            payload.put("lng", lng);
+            com.fooddelivery.mapsintegration.dto.UpdateLocationRequest payload = new com.fooddelivery.mapsintegration.dto.UpdateLocationRequest();
+            payload.setCityId(cityId);
+            payload.setDriverId(driverId);
+            payload.setLat(lat);
+            payload.setLng(lng);
             return objectMapper.writeValueAsString(integrationController.updateLocation(payload).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();

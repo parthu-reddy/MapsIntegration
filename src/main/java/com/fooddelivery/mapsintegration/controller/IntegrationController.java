@@ -7,6 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.fooddelivery.mapsintegration.dto.DispatchOrderRequest;
+import com.fooddelivery.mapsintegration.dto.SetAvailabilityRequest;
+import com.fooddelivery.mapsintegration.dto.UpdateLocationRequest;
+import jakarta.validation.Valid;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,13 +55,9 @@ public class IntegrationController {
 
     @PostMapping("/logistics/dispatch")
     @PreAuthorize("hasRole('DELIVERY')")
-    public ResponseEntity<?> dispatchOrder(@RequestBody Map<String, String> payload) {
-        String cityId = payload.get("cityId");
-        String restaurantCoords = payload.get("restaurantCoords");
-
-        if (cityId == null || restaurantCoords == null) {
-            return ResponseEntity.badRequest().body("cityId and restaurantCoords are required");
-        }
+    public ResponseEntity<?> dispatchOrder(@Valid @RequestBody DispatchOrderRequest payload) {
+        String cityId = payload.getCityId();
+        String restaurantCoords = payload.getRestaurantCoords();
 
         String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords);
         Map<String, Object> response = new HashMap<>();
@@ -81,14 +82,10 @@ public class IntegrationController {
 
     @PostMapping("/fleet/availability")
     @PreAuthorize("hasRole('DELIVERY')")
-    public ResponseEntity<?> setAvailability(@RequestBody Map<String, Object> payload) {
-        String cityId = (String) payload.get("cityId");
-        String driverId = (String) payload.get("driverId");
-        Boolean available = (Boolean) payload.get("available");
-
-        if (cityId == null || driverId == null || available == null) {
-            return ResponseEntity.badRequest().body("cityId, driverId, and available are required");
-        }
+    public ResponseEntity<?> setAvailability(@Valid @RequestBody SetAvailabilityRequest payload) {
+        String cityId = payload.getCityId();
+        String driverId = payload.getDriverId();
+        Boolean available = payload.getAvailable();
 
         fleetTrackingService.setDriverAvailability(cityId, driverId, available);
         Map<String, Boolean> response = new HashMap<>();
@@ -118,16 +115,12 @@ public class IntegrationController {
 
     @PostMapping("/fleet/location")
     @PreAuthorize("hasRole('DELIVERY')")
-    public ResponseEntity<?> updateLocation(@RequestBody Map<String, Object> payload) {
-        String cityId = (String) payload.get("cityId");
-        String driverId = (String) payload.get("driverId");
+    public ResponseEntity<?> updateLocation(@Valid @RequestBody UpdateLocationRequest payload) {
+        String cityId = payload.getCityId();
+        String driverId = payload.getDriverId();
         
-        if (cityId == null || driverId == null || !payload.containsKey("lat") || !payload.containsKey("lng")) {
-            return ResponseEntity.badRequest().body("cityId, driverId, lat, and lng are required");
-        }
-        
-        Double lat = Double.parseDouble(payload.get("lat").toString());
-        Double lng = Double.parseDouble(payload.get("lng").toString());
+        Double lat = payload.getLat();
+        Double lng = payload.getLng();
 
         fleetTrackingService.updateDriverLocation(cityId, driverId, lat, lng);
         Map<String, Boolean> response = new HashMap<>();
