@@ -2,8 +2,8 @@ package com.fooddelivery.mapsintegration.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.beans.factory.annotation.Value;
+import com.fooddelivery.mapsintegration.client.OlaMapsClient;
 import org.springframework.ai.tool.annotation.Tool;
 
 import java.util.Collections;
@@ -16,24 +16,24 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LocationService {
 
-    private final RestTemplate restTemplate;
+    private final OlaMapsClient olaMapsClient;
+    
+    @Value("${olamaps.api.key}")
+    private String apiKey;
 
     @Autowired
-    public LocationService(RestTemplate olaMapsRestTemplate) {
-        this.restTemplate = olaMapsRestTemplate;
+    public LocationService(OlaMapsClient olaMapsClient) {
+        this.olaMapsClient = olaMapsClient;
     }
 
     @Tool(description = "Get autocomplete suggestions for a given input query using Ola Maps Places API. Useful for finding location names.")
     public List<Map<String, Object>> getAutocompleteSuggestions(String input, Double userLat, Double userLng) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/places/v1/autocomplete")
-                .queryParam("input", input);
-
-        if (userLat != null && userLng != null) {
-            builder.queryParam("location", userLat + "," + userLng);
-        }
-
         try {
-            Map<String, Object> response = restTemplate.getForObject(builder.toUriString(), Map.class);
+            String locStr = null;
+            if (userLat != null && userLng != null) {
+                locStr = userLat + "," + userLng;
+            }
+            Map<String, Object> response = olaMapsClient.getAutocompleteSuggestions(input, locStr, apiKey);
             if (response != null && response.containsKey("predictions")) {
                 return (List<Map<String, Object>>) response.get("predictions");
             }
@@ -45,11 +45,9 @@ public class LocationService {
 
     @Tool(description = "Resolve latitude and longitude coordinates into a human-readable street address using Ola Maps Reverse Geocoding API.")
     public String resolveCoordinatesToAddress(double lat, double lng) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/places/v1/reverse-geocode")
-                .queryParam("latlng", lat + "," + lng);
-
         try {
-            Map<String, Object> response = restTemplate.getForObject(builder.toUriString(), Map.class);
+            String latlng = lat + "," + lng;
+            Map<String, Object> response = olaMapsClient.reverseGeocode(latlng, apiKey);
             if (response != null && response.containsKey("results")) {
                 List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
                 if (!results.isEmpty()) {

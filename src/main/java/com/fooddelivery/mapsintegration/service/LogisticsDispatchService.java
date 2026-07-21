@@ -3,8 +3,8 @@ package com.fooddelivery.mapsintegration.service;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.beans.factory.annotation.Value;
+import com.fooddelivery.mapsintegration.client.OlaMapsClient;
 import org.springframework.ai.tool.annotation.Tool;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,13 +20,16 @@ import java.time.Duration;
 @Slf4j
 public class LogisticsDispatchService {
 
-    private final RestTemplate restTemplate;
+    private final OlaMapsClient olaMapsClient;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    
+    @Value("${olamaps.api.key}")
+    private String apiKey;
 
     @Autowired
-    public LogisticsDispatchService(RestTemplate olaMapsRestTemplate, RedisTemplate<String, String> redisTemplate) {
-        this.restTemplate = olaMapsRestTemplate;
+    public LogisticsDispatchService(OlaMapsClient olaMapsClient, RedisTemplate<String, String> redisTemplate) {
+        this.olaMapsClient = olaMapsClient;
         this.redisTemplate = redisTemplate;
         this.objectMapper = new ObjectMapper();
     }
@@ -51,13 +54,9 @@ public class LogisticsDispatchService {
             System.err.println("Failed to read from cache: " + e.getMessage());
         }
 
-        String uriString = "/routing/v1/distanceMatrix?origins=" + origins + 
-                "&destinations=" + restaurantCoords + 
-                "&mode=driving&route_preference=fastest";
-
         List<Map<String, Object>> results = new ArrayList<>();
         try {
-            Map<String, Object> response = restTemplate.getForObject(uriString, Map.class);
+            Map<String, Object> response = olaMapsClient.getDistanceMatrix(origins, restaurantCoords, "driving", "fastest", apiKey);
             if (response != null && response.containsKey("rows")) {
                 List<Map<String, Object>> rows = (List<Map<String, Object>>) response.get("rows");
                 for (Map<String, Object> row : rows) {
@@ -104,18 +103,9 @@ public class LogisticsDispatchService {
     @Tool(description = "Generate turn-by-turn routing directions between an origin and a destination using Ola Maps Directions API.")
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "generateTurnByTurnDirectionsFallback")
     public Map<String, Object> generateTurnByTurnDirections(String origin, String destination) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/routing/v1/directions")
-                .queryParam("origin", origin)
-                .queryParam("destination", destination)
-                .queryParam("mode", "driving")
-                .queryParam("steps", true)
-                .queryParam("overview", "full")
-                .queryParam("language", "en")
-                .queryParam("route_preference", "fastest");
-
         Map<String, Object> routeInfo = new HashMap<>();
         try {
-            Map<String, Object> response = restTemplate.postForObject(builder.toUriString(), null, Map.class);
+            Map<String, Object> response = olaMapsClient.getDirections(origin, destination, "driving", true, "full", "en", "fastest", apiKey);
             
             if (response != null && response.containsKey("routes")) {
                 List<Map<String, Object>> routes = (List<Map<String, Object>>) response.get("routes");

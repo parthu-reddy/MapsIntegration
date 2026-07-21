@@ -6,6 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@EnableFeignClients
 @SpringBootApplication(
     scanBasePackages = {
         "com.fooddelivery.mapsintegration",

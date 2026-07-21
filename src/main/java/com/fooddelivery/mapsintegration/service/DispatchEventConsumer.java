@@ -46,7 +46,7 @@ public class DispatchEventConsumer {
                 java.util.Map<String, Object> eventPayload = java.util.Map.of(
                         "orderId", orderId,
                         "driverId", driverId,
-                        "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND,
+                        "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(),
                         "deliveryLat", deliveryLat,
                         "deliveryLng", deliveryLng,
                         "deliveryAddress", deliveryAddress
@@ -55,9 +55,10 @@ public class DispatchEventConsumer {
                         .withPayload(objectMapper.writeValueAsString(eventPayload))
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
-                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND)
+                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name())
                         .build();
                 try {
+                    logger.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
                 } catch (Exception ex) {
                     logger.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}. Releasing driver {}", orderId, driverId, ex);
@@ -68,15 +69,16 @@ public class DispatchEventConsumer {
                 logger.warn("No drivers available for order {}", orderId);
                 java.util.Map<String, Object> eventPayload = java.util.Map.of(
                         "orderId", orderId,
-                        "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED
+                        "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name()
                 );
                 org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
                         .withPayload(objectMapper.writeValueAsString(eventPayload))
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
-                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED)
+                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name())
                         .build();
                 try {
+                    logger.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
                 } catch (Exception ex) {
                     logger.error("Failed to publish DISPATCH_FAILED for order {}", orderId, ex);
