@@ -105,7 +105,7 @@ public class FleetTrackingService {
     }
 
     @Tool(description = "Dispatch an order to the nearest available driver based on the restaurant's coordinates within a city. Finds drivers in a 5km radius, filters by availability, sorts by driving ETA, and atomically assigns the order using a Redis distributed lock.")
-    public String dispatchOrder(String cityId, String restaurantCoords) {
+    public String dispatchOrder(String cityId, String restaurantCoords, List<String> excludedDriverIds) {
         String[] coords = restaurantCoords.split(",");
         double restLat = Double.parseDouble(coords[0]);
         double restLng = Double.parseDouble(coords[1]);
@@ -126,6 +126,11 @@ public class FleetTrackingService {
         List<DriverCandidate> candidates = new ArrayList<>();
         for (GeoResult<RedisGeoCommands.GeoLocation<String>> result : nearbyDrivers) {
             String driverId = result.getContent().getName();
+            
+            if (excludedDriverIds != null && excludedDriverIds.contains(driverId)) {
+                continue;
+            }
+            
             Boolean isAvail = redisTemplate.opsForSet().isMember(availKey, driverId);
             if (Boolean.TRUE.equals(isAvail)) {
                 Point point = result.getContent().getPoint();

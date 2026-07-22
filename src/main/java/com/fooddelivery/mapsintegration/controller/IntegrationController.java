@@ -59,7 +59,7 @@ public class IntegrationController {
         String cityId = payload.getCityId();
         String restaurantCoords = payload.getRestaurantCoords();
 
-        String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords);
+        String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, null);
         Map<String, Object> response = new HashMap<>();
         if (driverId != null) {
             response.put("success", true);
@@ -88,6 +88,18 @@ public class IntegrationController {
         Boolean available = payload.getAvailable();
 
         fleetTrackingService.setDriverAvailability(cityId, driverId, available);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/fleet/release")
+    @PreAuthorize("hasRole('DELIVERY')")
+    public ResponseEntity<?> releaseDriver(@Valid @RequestBody SetAvailabilityRequest payload) {
+        String cityId = payload.getCityId();
+        String driverId = payload.getDriverId();
+
+        fleetTrackingService.releaseDriver(cityId, driverId);
         Map<String, Boolean> response = new HashMap<>();
         response.put("success", true);
         return ResponseEntity.ok(response);

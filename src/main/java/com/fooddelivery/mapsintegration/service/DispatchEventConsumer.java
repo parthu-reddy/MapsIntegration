@@ -33,13 +33,21 @@ public class DispatchEventConsumer {
             double deliveryLng = rootNode.path("deliveryLng").asDouble(0.0);
             String deliveryAddress = rootNode.path("deliveryAddress").asText("");
             
-            logger.info("Dispatch request for order {} from {},{} to {},{}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng);
+            java.util.List<String> excludedDriverIds = new java.util.ArrayList<>();
+            JsonNode excludedDriversNode = rootNode.path("excludedDriverIds");
+            if (excludedDriversNode.isArray()) {
+                for (JsonNode idNode : excludedDriversNode) {
+                    excludedDriverIds.add(idNode.asText());
+                }
+            }
+            
+            logger.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
             
             String cityId = com.fooddelivery.common.constants.AppConstants.DEFAULT_CITY_ID;
             String restaurantCoords = restaurantLat + "," + restaurantLng;
             
             // FleetTrackingService contains the mock Redis logic for assigning a driver.
-            String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords);
+            String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds);
             
             if (driverId != null) {
                 logger.info("Successfully dispatched driver {} for order {}", driverId, orderId);
