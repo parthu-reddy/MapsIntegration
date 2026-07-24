@@ -59,12 +59,12 @@ public class IntegrationController {
         String cityId = payload.getCityId();
         String restaurantCoords = payload.getRestaurantCoords();
 
-        String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, null);
+        List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, null);
         Map<String, Object> response = new HashMap<>();
-        if (driverId != null) {
+        if (driverIds != null && !driverIds.isEmpty()) {
             response.put("success", true);
-            response.put("driverId", driverId);
-            response.put("message", "Driver successfully assigned.");
+            response.put("driverIds", driverIds);
+            response.put("message", "Drivers successfully assigned.");
             return ResponseEntity.ok(response);
         } else {
             response.put("success", false);

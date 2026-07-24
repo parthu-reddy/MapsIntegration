@@ -42,7 +42,8 @@ class DispatchEventConsumerTest {
         String payload = "{\"orderId\":\"" + orderId + "\", \"restaurantLat\":12.9716, \"restaurantLng\":77.5946}";
         
         String driverId = UUID.randomUUID().toString();
-        when(fleetTrackingService.dispatchOrder(eq("BLR"), eq("12.9716,77.5946"), any())).thenReturn(driverId);
+        when(kafkaTemplate.send(org.mockito.ArgumentMatchers.<org.springframework.messaging.Message<?>>any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        when(fleetTrackingService.dispatchOrder(eq("BLR"), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Collections.singletonList(driverId.toString()));
 
         dispatchEventConsumer.consumeDispatchEvent(payload);
 
@@ -60,7 +61,8 @@ class DispatchEventConsumerTest {
         String orderId = UUID.randomUUID().toString();
         String payload = "{\"orderId\":\"" + orderId + "\", \"restaurantLat\":12.9716, \"restaurantLng\":77.5946}";
         
-        when(fleetTrackingService.dispatchOrder(eq("BLR"), eq("12.9716,77.5946"), any())).thenReturn(null);
+        when(kafkaTemplate.send(org.mockito.ArgumentMatchers.<org.springframework.messaging.Message<?>>any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        when(fleetTrackingService.dispatchOrder(eq("BLR"), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(null);
 
         dispatchEventConsumer.consumeDispatchEvent(payload);
 

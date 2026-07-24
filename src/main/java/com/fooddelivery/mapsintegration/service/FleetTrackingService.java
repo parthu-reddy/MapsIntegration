@@ -25,6 +25,9 @@ public class FleetTrackingService {
     private final RedisTemplate<String, String> redisTemplate;
     private final LogisticsDispatchService dispatchService;
 
+    @org.springframework.beans.factory.annotation.Value("${dispatch.max-candidates:10}")
+    private int maxCandidates;
+
     @Autowired
     public FleetTrackingService(RedisTemplate<String, String> redisTemplate, LogisticsDispatchService dispatchService) {
         this.redisTemplate = redisTemplate;
@@ -104,8 +107,8 @@ public class FleetTrackingService {
         return null;
     }
 
-    @Tool(description = "Dispatch an order to the nearest available driver based on the restaurant's coordinates within a city. Finds drivers in a 5km radius, filters by availability, sorts by driving ETA, and atomically assigns the order using a Redis distributed lock.")
-    public String dispatchOrder(String cityId, String restaurantCoords, List<String> excludedDriverIds) {
+    @Tool(description = "Dispatch an order to the nearest available drivers based on the restaurant's coordinates within a city. Finds drivers in a 5km radius, filters by availability, sorts by driving ETA, and returns a list of top candidates.")
+    public List<String> dispatchOrder(String cityId, String restaurantCoords, List<String> excludedDriverIds) {
         String[] coords = restaurantCoords.split(",");
         double restLat = Double.parseDouble(coords[0]);
         double restLng = Double.parseDouble(coords[1]);
@@ -166,17 +169,12 @@ public class FleetTrackingService {
 
         candidates.sort(Comparator.comparingDouble(c -> c.duration));
 
-        // 4. Atomic Assignment
-        for (DriverCandidate candidate : candidates) {
-            String lockKey = "driver:lock:" + candidate.id;
-            Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "locked", Duration.ofSeconds(30));
-            if (Boolean.TRUE.equals(locked)) {
-                setDriverAvailability(cityId, candidate.id, false);
-                return candidate.id;
-            }
+        List<String> topCandidates = new ArrayList<>();
+        for (int i = 0; i < Math.min(maxCandidates, candidates.size()); i++) {
+            topCandidates.add(candidates.get(i).id);
         }
 
-        return null;
+        return topCandidates.isEmpty() ? null : topCandidates;
     }
 
     @Tool(description = "Release a driver's lock and restore their availability in case of a dispatch failure.")

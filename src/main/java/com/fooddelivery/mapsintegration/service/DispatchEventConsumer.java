@@ -47,13 +47,13 @@ public class DispatchEventConsumer {
             String restaurantCoords = restaurantLat + "," + restaurantLng;
             
             // FleetTrackingService contains the mock Redis logic for assigning a driver.
-            String driverId = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds);
+            java.util.List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds);
             
-            if (driverId != null) {
-                logger.info("Successfully dispatched driver {} for order {}", driverId, orderId);
+            if (driverIds != null && !driverIds.isEmpty()) {
+                logger.info("Successfully dispatched drivers {} for order {}", driverIds, orderId);
                 java.util.Map<String, Object> eventPayload = java.util.Map.of(
                         "orderId", orderId,
-                        "driverId", driverId,
+                        "driverIds", driverIds,
                         "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(),
                         "deliveryLat", deliveryLat,
                         "deliveryLng", deliveryLng,
@@ -69,8 +69,7 @@ public class DispatchEventConsumer {
                     logger.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
                 } catch (Exception ex) {
-                    logger.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}. Releasing driver {}", orderId, driverId, ex);
-                    fleetTrackingService.releaseDriver(cityId, driverId);
+                    logger.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}.", orderId, ex);
                     throw ex;
                 }
             } else {
