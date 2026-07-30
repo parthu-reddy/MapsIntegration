@@ -18,9 +18,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.ai.tool.annotation.Tool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class FleetTrackingService {
+    private static final Logger logger = LoggerFactory.getLogger(FleetTrackingService.class);
 
     private final RedisTemplate<String, String> redisTemplate;
     private final LogisticsDispatchService dispatchService;
@@ -127,10 +130,13 @@ public class FleetTrackingService {
 
         // 2. Availability Intersection
         List<DriverCandidate> candidates = new ArrayList<>();
+        int skippedExcluded = 0;
+        int skippedUnavailable = 0;
         for (GeoResult<RedisGeoCommands.GeoLocation<String>> result : nearbyDrivers) {
             String driverId = result.getContent().getName();
             
             if (excludedDriverIds != null && excludedDriverIds.contains(driverId)) {
+                skippedExcluded++;
                 continue;
             }
             
@@ -138,8 +144,13 @@ public class FleetTrackingService {
             if (Boolean.TRUE.equals(isAvail)) {
                 Point point = result.getContent().getPoint();
                 candidates.add(new DriverCandidate(driverId, point.getY(), point.getX()));
+            } else {
+                skippedUnavailable++;
             }
         }
+        
+        logger.info("Spatial filtering found {} nearby drivers. Skipped {} excluded, {} unavailable. {} final candidates.", 
+                nearbyDrivers.getContent().size(), skippedExcluded, skippedUnavailable, candidates.size());
 
         if (candidates.isEmpty()) return null;
 
@@ -174,14 +185,23 @@ public class FleetTrackingService {
             topCandidates.add(candidates.get(i).id);
         }
 
+        // Remove dispatched drivers from the available pool to prevent double-dispatching.
+        // They will be added back by releaseDriver() on reject or timeout.
+        if (!topCandidates.isEmpty()) {
+            redisTemplate.opsForSet().remove(availKey, topCandidates.toArray(new String[0]));
+            logger.info("Removed {} dispatched drivers from available pool: {}", topCandidates.size(), topCandidates);
+        }
+
         return topCandidates.isEmpty() ? null : topCandidates;
     }
 
     @Tool(description = "Release a driver's lock and restore their availability in case of a dispatch failure.")
     public void releaseDriver(String cityId, String driverId) {
+        logger.info("Releasing driver {} in city {} (restoring availability)", driverId, cityId);
         String lockKey = "driver:lock:" + driverId;
         redisTemplate.delete(lockKey);
         setDriverAvailability(cityId, driverId, true);
+        logger.info("Driver {} is now marked as available in Redis.", driverId);
     }
 
     @Tool(description = "Check if there are any available drivers within a specific radius of a location.")
