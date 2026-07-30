@@ -81,7 +81,6 @@ public class IntegrationController {
     }
 
     @PostMapping("/fleet/availability")
-    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> setAvailability(@Valid @RequestBody SetAvailabilityRequest payload) {
         String cityId = payload.getCityId();
         String driverId = payload.getDriverId();
@@ -94,7 +93,6 @@ public class IntegrationController {
     }
 
     @PostMapping("/fleet/release")
-    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> releaseDriver(@Valid @RequestBody SetAvailabilityRequest payload) {
         String cityId = payload.getCityId();
         String driverId = payload.getDriverId();
