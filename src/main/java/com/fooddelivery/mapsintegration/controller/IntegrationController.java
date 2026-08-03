@@ -80,6 +80,15 @@ public class IntegrationController {
         return ResponseEntity.ok(routeInfo);
     }
 
+    @GetMapping("/logistics/distance")
+    @PreAuthorize("hasAnyRole('DELIVERY', 'CUSTOMER', 'RESTAURANT')")
+    public ResponseEntity<?> getDistance(@RequestParam String origin, @RequestParam String destination) {
+        double distanceKm = dispatchService.getRouteDistance(origin, destination);
+        Map<String, Object> response = new HashMap<>();
+        response.put("distance", distanceKm);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/fleet/availability")
     public ResponseEntity<?> setAvailability(@Valid @RequestBody SetAvailabilityRequest payload) {
         String cityId = payload.getCityId();
