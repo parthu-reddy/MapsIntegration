@@ -18,14 +18,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.ai.tool.annotation.Tool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class FleetTrackingService {
-    private static final Logger logger = LoggerFactory.getLogger(FleetTrackingService.class);
-
-    private final RedisTemplate<String, String> redisTemplate;
+private final RedisTemplate<String, String> redisTemplate;
     private final LogisticsDispatchService dispatchService;
 
     @org.springframework.beans.factory.annotation.Value("${dispatch.max-candidates:10}")

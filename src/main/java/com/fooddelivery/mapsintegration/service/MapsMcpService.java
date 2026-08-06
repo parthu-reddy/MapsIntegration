@@ -7,8 +7,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.HashMap;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class MapsMcpService {
 
     private final IntegrationController integrationController;
