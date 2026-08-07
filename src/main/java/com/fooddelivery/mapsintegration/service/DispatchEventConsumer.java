@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
-@Slf4j
 public class DispatchEventConsumer {
-private final FleetTrackingService fleetTrackingService;
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DispatchEventConsumer.class);
+    private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper;
     private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
 
@@ -21,7 +21,7 @@ private final FleetTrackingService fleetTrackingService;
 
     @KafkaListener(topics = com.fooddelivery.common.constants.KafkaConstants.TOPIC_LOGISTICS_DISPATCH, groupId = com.fooddelivery.common.constants.KafkaConstants.GROUP_MAPS_INTEGRATION)
     public void consumeDispatchEvent(String payload) {
-        logger.info("Received dispatch event: {}", payload);
+        log.info("Received dispatch event: {}", payload);
         try {
             JsonNode rootNode = objectMapper.readTree(payload);
             String orderId = rootNode.path("orderId").asText(null);
@@ -30,7 +30,6 @@ private final FleetTrackingService fleetTrackingService;
             double deliveryLat = rootNode.path("deliveryLat").asDouble(0.0);
             double deliveryLng = rootNode.path("deliveryLng").asDouble(0.0);
             String deliveryAddress = rootNode.path("deliveryAddress").asText("");
-            
             java.util.List<String> excludedDriverIds = new java.util.ArrayList<>();
             JsonNode excludedDriversNode = rootNode.path("excludedDriverIds");
             if (excludedDriversNode.isArray()) {
@@ -38,60 +37,36 @@ private final FleetTrackingService fleetTrackingService;
                     excludedDriverIds.add(idNode.asText());
                 }
             }
-            
-            logger.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
-            
+            log.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
             String cityId = com.fooddelivery.common.constants.AppConstants.DEFAULT_CITY_ID;
             String restaurantCoords = restaurantLat + "," + restaurantLng;
-            
             // FleetTrackingService contains the mock Redis logic for assigning a driver.
             java.util.List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds);
-            
             if (driverIds != null && !driverIds.isEmpty()) {
-                logger.info("Successfully dispatched drivers {} for order {}", driverIds, orderId);
-                java.util.Map<String, Object> eventPayload = java.util.Map.of(
-                        "orderId", orderId,
-                        "driverIds", driverIds,
-                        "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(),
-                        "deliveryLat", deliveryLat,
-                        "deliveryLng", deliveryLng,
-                        "deliveryAddress", deliveryAddress
-                );
-                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
-                        .withPayload(objectMapper.writeValueAsString(eventPayload))
-                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
-                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
-                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name())
-                        .build();
+                log.info("Successfully dispatched drivers {} for order {}", driverIds, orderId);
+                java.util.Map<String, Object> eventPayload = java.util.Map.of("orderId", orderId, "driverIds", driverIds, "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), "deliveryLat", deliveryLat, "deliveryLng", deliveryLng, "deliveryAddress", deliveryAddress);
+                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder.withPayload(objectMapper.writeValueAsString(eventPayload)).setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS).setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId).setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name()).build();
                 try {
-                    logger.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
+                    log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
                 } catch (Exception ex) {
-                    logger.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}.", orderId, ex);
+                    log.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}.", orderId, ex);
                     throw ex;
                 }
             } else {
-                logger.warn("No drivers available for order {}", orderId);
-                java.util.Map<String, Object> eventPayload = java.util.Map.of(
-                        "orderId", orderId,
-                        "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name()
-                );
-                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
-                        .withPayload(objectMapper.writeValueAsString(eventPayload))
-                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
-                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
-                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name())
-                        .build();
+                log.warn("No drivers available for order {}", orderId);
+                java.util.Map<String, Object> eventPayload = java.util.Map.of("orderId", orderId, "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name());
+                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder.withPayload(objectMapper.writeValueAsString(eventPayload)).setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS).setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId).setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name()).build();
                 try {
-                    logger.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name(), orderId);
+                    log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
                 } catch (Exception ex) {
-                    logger.error("Failed to publish DISPATCH_FAILED for order {}", orderId, ex);
+                    log.error("Failed to publish DISPATCH_FAILED for order {}", orderId, ex);
                     throw ex;
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to process dispatch event", e);
+            log.error("Failed to process dispatch event", e);
             throw new RuntimeException("Failed to process dispatch event", e);
         }
     }

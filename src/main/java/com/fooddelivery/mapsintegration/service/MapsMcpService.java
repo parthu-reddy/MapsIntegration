@@ -4,15 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.mapsintegration.controller.IntegrationController;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
-
 import java.util.Map;
 import java.util.HashMap;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
-@Slf4j
 public class MapsMcpService {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MapsMcpService.class);
     private final IntegrationController integrationController;
     private final ObjectMapper objectMapper;
 

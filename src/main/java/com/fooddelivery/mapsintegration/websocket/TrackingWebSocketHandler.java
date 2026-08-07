@@ -9,7 +9,6 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import reactor.core.publisher.Sinks;
@@ -18,12 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.extern.slf4j.Slf4j;
-
 @Component
-@Slf4j
 public class TrackingWebSocketHandler extends TextWebSocketHandler {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TrackingWebSocketHandler.class);
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Sinks.Many<LocationUpdate> sink = Sinks.many().unicast().onBackpressureBuffer();
@@ -35,11 +32,7 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     @PostConstruct
     public void init() {
-        sink.asFlux()
-            .onBackpressureDrop(update -> System.err.println("Dropped location ping due to backpressure: " + update.driverId))
-            .bufferTimeout(1000, Duration.ofMillis(500))
-            .publishOn(reactor.core.scheduler.Schedulers.boundedElastic())
-            .subscribe(this::flushBatch);
+        sink.asFlux().onBackpressureDrop(update -> System.err.println("Dropped location ping due to backpressure: " + update.driverId)).bufferTimeout(1000, Duration.ofMillis(500)).publishOn(reactor.core.scheduler.Schedulers.boundedElastic()).subscribe(this::flushBatch);
     }
 
     @PreDestroy
@@ -64,11 +57,9 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
             JsonNode payload = objectMapper.readTree(message.getPayload());
             String driverId = payload.has("driverId") ? payload.get("driverId").asText() : null;
             String cityId = payload.has("cityId") ? payload.get("cityId").asText() : null;
-            
             if (driverId != null && cityId != null && payload.has("lat") && payload.has("lng")) {
                 double lat = payload.get("lat").asDouble();
                 double lng = payload.get("lng").asDouble();
-                
                 sink.tryEmitNext(new LocationUpdate(cityId, driverId, lat, lng));
             }
         } catch (Exception e) {
@@ -83,13 +74,11 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
 
     private void flushBatch(List<LocationUpdate> batch) {
         if (batch.isEmpty()) return;
-
         // Deduplicate in batch (keep latest per driver)
         Map<String, LocationUpdate> deduped = new HashMap<>();
         for (LocationUpdate update : batch) {
             deduped.put(update.driverId, update);
         }
-
         deduped.values().forEach(update -> {
             try {
                 fleetTrackingService.updateDriverLocation(update.cityId, update.driverId, update.lat, update.lng);
@@ -98,6 +87,7 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
             }
         });
     }
+
 
     private static class LocationUpdate {
         String cityId;

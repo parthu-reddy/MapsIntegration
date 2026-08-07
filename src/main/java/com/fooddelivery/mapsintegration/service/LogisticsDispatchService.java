@@ -6,8 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import com.fooddelivery.mapsintegration.client.OlaMapsClient;
 import org.springframework.ai.tool.annotation.Tool;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,13 +15,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 
 @Service
-@Slf4j
 public class LogisticsDispatchService {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LogisticsDispatchService.class);
     private final OlaMapsClient olaMapsClient;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
-    
     @Value("${olamaps.api.key}")
     private String apiKey;
 
@@ -40,20 +37,18 @@ public class LogisticsDispatchService {
         if (candidateCoordinates == null || candidateCoordinates.isEmpty()) {
             return new ArrayList<>();
         }
-
         String origins = String.join("|", candidateCoordinates);
-        
         String cacheKey = "eta:matrix:" + origins.hashCode() + ":" + restaurantCoords.hashCode();
         try {
             String cachedResponse = redisTemplate.opsForValue().get(cacheKey);
             if (cachedResponse != null) {
                 log.debug("Cache hit for distance matrix! Key: {}", cacheKey);
-                return objectMapper.readValue(cachedResponse, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>(){});
+                return objectMapper.readValue(cachedResponse, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {
+                });
             }
         } catch (Exception e) {
             System.err.println("Failed to read from cache: " + e.getMessage());
         }
-
         List<Map<String, Object>> results = new ArrayList<>();
         try {
             Map<String, Object> response = olaMapsClient.getDistanceMatrix(origins, restaurantCoords, "driving", "fastest", apiKey);
@@ -77,7 +72,6 @@ public class LogisticsDispatchService {
         } catch (Exception e) {
             return evaluateDriverETAsFallback(candidateCoordinates, restaurantCoords, e);
         }
-
         return results;
     }
 
@@ -88,11 +82,9 @@ public class LogisticsDispatchService {
             double distance = haversineDistance(coord, restaurantCoords);
             Map<String, Object> fallbackData = new HashMap<>();
             fallbackData.put("distance", distance);
-            
             Map<String, Object> durationMap = new HashMap<>();
             durationMap.put("value", distance / 400); // approximate speed
             fallbackData.put("duration", durationMap);
-            
             fallbackData.put("status", "OK");
             fallbackData.put("fallback", true);
             results.add(fallbackData);
@@ -106,13 +98,11 @@ public class LogisticsDispatchService {
         Map<String, Object> routeInfo = new HashMap<>();
         try {
             Map<String, Object> response = olaMapsClient.getDirections(origin, destination, "driving", true, "full", "en", "fastest", apiKey);
-            
             if (response != null && response.containsKey("routes")) {
                 List<Map<String, Object>> routes = (List<Map<String, Object>>) response.get("routes");
                 if (!routes.isEmpty()) {
                     Map<String, Object> routeData = routes.get(0);
                     routeInfo.put("polyline", routeData.get("overview_polyline"));
-                    
                     List<Map<String, Object>> legs = (List<Map<String, Object>>) routeData.get("legs");
                     if (legs != null && !legs.isEmpty()) {
                         Map<String, Object> leg = legs.get(0);
@@ -170,23 +160,17 @@ public class LogisticsDispatchService {
     private double haversineDistance(String coord1, String coord2) {
         String[] c1 = coord1.split(",");
         String[] c2 = coord2.split(",");
-        
         double lat1 = Double.parseDouble(c1[0]);
         double lon1 = Double.parseDouble(c1[1]);
         double lat2 = Double.parseDouble(c2[0]);
         double lon2 = Double.parseDouble(c2[1]);
-
-        double R = 6371e3;
+        double R = 6371000.0;
         double phi1 = lat1 * Math.PI / 180;
         double phi2 = lat2 * Math.PI / 180;
         double deltaPhi = (lat2 - lat1) * Math.PI / 180;
         double deltaLambda = (lon2 - lon1) * Math.PI / 180;
-
-        double a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-                   Math.cos(phi1) * Math.cos(phi2) *
-                   Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        double a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
         return R * c;
     }
 }
