@@ -3,6 +3,12 @@ package com.fooddelivery.mapsintegration.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,6 +25,7 @@ public class DispatchEventConsumer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
+    @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true", dltStrategy = DltStrategy.FAIL_ON_ERROR)
     @KafkaListener(topics = com.fooddelivery.common.constants.KafkaConstants.TOPIC_LOGISTICS_DISPATCH, groupId = com.fooddelivery.common.constants.KafkaConstants.GROUP_MAPS_INTEGRATION)
     public void consumeDispatchEvent(String payload) {
         log.info("Received dispatch event: {}", payload);
@@ -69,5 +76,10 @@ public class DispatchEventConsumer {
             log.error("Failed to process dispatch event", e);
             throw new RuntimeException("Failed to process dispatch event", e);
         }
+    }
+
+    @DltHandler
+    public void handleDlt(Object message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        System.err.println("Message failed 5 times and sent to DLT: " + topic + " - " + message);
     }
 }

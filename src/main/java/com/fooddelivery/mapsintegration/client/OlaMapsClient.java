@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 
-@FeignClient(name = "ola-maps", url = "${olamaps.api.base-url:https://api.olamaps.io}", configuration = com.fooddelivery.mapsintegration.config.OlaMapsFeignConfig.class)
+@FeignClient(name = "ola-maps", url = "${olamaps.api.base-url:https://api.olamaps.io}", configuration = com.fooddelivery.mapsintegration.config.OlaMapsFeignConfig.class, fallback = OlaMapsClientFallback.class)
 public interface OlaMapsClient {
 
     @GetMapping("/places/v1/autocomplete")

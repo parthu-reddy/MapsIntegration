@@ -3,3 +3,24 @@ spring:
     name: mapsintegration
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 2000
+            readTimeout: 3000
+      circuitbreaker:
+        enabled: true
+        alphanumeric-ids: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true

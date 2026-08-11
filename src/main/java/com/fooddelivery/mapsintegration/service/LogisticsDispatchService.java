@@ -76,20 +76,8 @@ public class LogisticsDispatchService {
     }
 
     public List<Map<String, Object>> evaluateDriverETAsFallback(List<String> candidateCoordinates, String restaurantCoords, Throwable t) {
-        System.err.println("Circuit breaker open or API failed, using Haversine fallback. Error: " + t.getMessage());
-        List<Map<String, Object>> results = new ArrayList<>();
-        for (String coord : candidateCoordinates) {
-            double distance = haversineDistance(coord, restaurantCoords);
-            Map<String, Object> fallbackData = new HashMap<>();
-            fallbackData.put("distance", distance);
-            Map<String, Object> durationMap = new HashMap<>();
-            durationMap.put("value", distance / 400); // approximate speed
-            fallbackData.put("duration", durationMap);
-            fallbackData.put("status", "OK");
-            fallbackData.put("fallback", true);
-            results.add(fallbackData);
-        }
-        return results;
+        System.err.println("Circuit breaker open or API failed for driver ETAs. Error: " + t.getMessage());
+        throw new IllegalStateException("Logistics routing service unavailable. Cannot estimate driver ETAs.", t);
     }
 
     @Tool(description = "Generate turn-by-turn routing directions between an origin and a destination using Ola Maps Directions API.")
@@ -120,13 +108,7 @@ public class LogisticsDispatchService {
 
     public Map<String, Object> generateTurnByTurnDirectionsFallback(String origin, String destination, Throwable t) {
         System.err.println("Circuit breaker open for directions. Error: " + t.getMessage());
-        Map<String, Object> fallback = new HashMap<>();
-        fallback.put("polyline", "");
-        fallback.put("distance", "Unknown");
-        fallback.put("duration", "Unknown");
-        fallback.put("steps", new ArrayList<>());
-        fallback.put("fallback", true);
-        return fallback;
+        throw new IllegalStateException("Directions service unavailable.", t);
     }
 
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "getRouteDistanceFallback")
@@ -153,8 +135,8 @@ public class LogisticsDispatchService {
     }
 
     public double getRouteDistanceFallback(String origin, String destination, Throwable t) {
-        System.err.println("Circuit breaker open or API failed for distance, using Haversine fallback. Error: " + t.getMessage());
-        return haversineDistance(origin, destination) / 1000.0;
+        System.err.println("Circuit breaker open or API failed for distance. Error: " + t.getMessage());
+        throw new IllegalArgumentException("Routing service unavailable. Cannot compute delivery distance.", t);
     }
 
     private double haversineDistance(String coord1, String coord2) {
