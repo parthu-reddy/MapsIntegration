@@ -14,15 +14,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api")
+@RefreshScope
 public class IntegrationController {
     @java.lang.SuppressWarnings("all")
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(IntegrationController.class);
     private final LocationService locationService;
     private final LogisticsDispatchService dispatchService;
     private final FleetTrackingService fleetTrackingService;
+
+    @Value("${olamaps.api.key}")
+    private String olaMapsApiKey;
 
     @Autowired
     public IntegrationController(LocationService locationService, LogisticsDispatchService dispatchService, FleetTrackingService fleetTrackingService) {
@@ -149,10 +155,9 @@ public class IntegrationController {
     }
 
     @GetMapping("/config/maps-key")
-    @PreAuthorize("hasAnyRole(\'CUSTOMER\', \'RESTAURANT\', \'DELIVERY\')")
     public ResponseEntity<?> getMapsKey() {
         Map<String, String> response = new HashMap<>();
-        response.put("key", System.getenv("OLA_MAPS_API_KEY"));
+        response.put("key", olaMapsApiKey);
         return ResponseEntity.ok(response);
     }
 

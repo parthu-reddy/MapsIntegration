@@ -14,7 +14,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+
 @Service
+@RefreshScope
 public class LogisticsDispatchService {
     @java.lang.SuppressWarnings("all")
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LogisticsDispatchService.class);
@@ -37,6 +40,7 @@ public class LogisticsDispatchService {
         if (candidateCoordinates == null || candidateCoordinates.isEmpty()) {
             return new ArrayList<>();
         }
+
         String origins = String.join("|", candidateCoordinates);
         String cacheKey = "eta:matrix:" + origins.hashCode() + ":" + restaurantCoords.hashCode();
         try {
@@ -83,6 +87,7 @@ public class LogisticsDispatchService {
     @Tool(description = "Generate turn-by-turn routing directions between an origin and a destination using Ola Maps Directions API.")
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "generateTurnByTurnDirectionsFallback")
     public Map<String, Object> generateTurnByTurnDirections(String origin, String destination) {
+
         Map<String, Object> routeInfo = new HashMap<>();
         try {
             Map<String, Object> response = olaMapsClient.getDirections(origin, destination, "driving", true, "full", "en", "fastest", apiKey);
@@ -113,6 +118,7 @@ public class LogisticsDispatchService {
 
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "getRouteDistanceFallback")
     public double getRouteDistance(String origin, String destination) {
+
         try {
             Map<String, Object> response = olaMapsClient.getDistanceMatrix(origin, destination, "driving", "fastest", apiKey);
             if (response != null && response.containsKey("rows")) {
@@ -120,10 +126,15 @@ public class LogisticsDispatchService {
                 if (!rows.isEmpty()) {
                     List<Map<String, Object>> elements = (List<Map<String, Object>>) rows.get(0).get("elements");
                     if (elements != null && !elements.isEmpty()) {
-                        Map<String, Object> distanceObj = (Map<String, Object>) elements.get(0).get("distance");
-                        if (distanceObj != null && distanceObj.containsKey("value")) {
-                            Number value = (Number) distanceObj.get("value");
-                            return value.doubleValue() / 1000.0; // convert meters to kilometers
+                        Object distanceObj = elements.get(0).get("distance");
+                        if (distanceObj instanceof Number) {
+                            return ((Number) distanceObj).doubleValue() / 1000.0;
+                        } else if (distanceObj instanceof Map) {
+                            Map<String, Object> distanceMap = (Map<String, Object>) distanceObj;
+                            if (distanceMap.containsKey("value")) {
+                                Number value = (Number) distanceMap.get("value");
+                                return value.doubleValue() / 1000.0; // convert meters to kilometers
+                            }
                         }
                     }
                 }
@@ -139,20 +150,5 @@ public class LogisticsDispatchService {
         throw new IllegalArgumentException("Routing service unavailable. Cannot compute delivery distance.", t);
     }
 
-    private double haversineDistance(String coord1, String coord2) {
-        String[] c1 = coord1.split(",");
-        String[] c2 = coord2.split(",");
-        double lat1 = Double.parseDouble(c1[0]);
-        double lon1 = Double.parseDouble(c1[1]);
-        double lat2 = Double.parseDouble(c2[0]);
-        double lon2 = Double.parseDouble(c2[1]);
-        double R = 6371000.0;
-        double phi1 = lat1 * Math.PI / 180;
-        double phi2 = lat2 * Math.PI / 180;
-        double deltaPhi = (lat2 - lat1) * Math.PI / 180;
-        double deltaLambda = (lon2 - lon1) * Math.PI / 180;
-        double a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
+
 }

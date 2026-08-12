@@ -3,7 +3,7 @@ package com.fooddelivery.mapsintegration.client;
 import org.springframework.stereotype.Component;
 import java.util.Map;
 
-@Component
+@Component("mapsOlaMapsClientFallback")
 public class OlaMapsClientFallback implements OlaMapsClient {
     @Override
     public Map<String, Object> getAutocompleteSuggestions(String input, String location, String apiKey) {
