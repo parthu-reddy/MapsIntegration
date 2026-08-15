@@ -18,9 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 @Component
+@lombok.extern.slf4j.Slf4j
 public class TrackingWebSocketHandler extends TextWebSocketHandler {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TrackingWebSocketHandler.class);
+
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Sinks.Many<LocationUpdate> sink = Sinks.many().unicast().onBackpressureBuffer();

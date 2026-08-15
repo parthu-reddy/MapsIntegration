@@ -10,9 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class LocationService {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LocationService.class);
+
     private final OlaMapsClient olaMapsClient;
     @Value("${olamaps.api.key}")
     private String apiKey;

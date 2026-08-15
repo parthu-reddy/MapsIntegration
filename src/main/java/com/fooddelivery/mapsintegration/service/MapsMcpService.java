@@ -8,9 +8,10 @@ import java.util.Map;
 import java.util.HashMap;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class MapsMcpService {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MapsMcpService.class);
+
     private final IntegrationController integrationController;
     private final ObjectMapper objectMapper;
 

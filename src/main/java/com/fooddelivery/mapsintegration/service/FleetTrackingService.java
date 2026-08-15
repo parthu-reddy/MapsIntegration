@@ -19,9 +19,10 @@ import java.util.stream.Collectors;
 import org.springframework.ai.tool.annotation.Tool;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class FleetTrackingService {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FleetTrackingService.class);
+
     private final RedisTemplate<String, String> redisTemplate;
     private final LogisticsDispatchService dispatchService;
     @org.springframework.beans.factory.annotation.Value("${dispatch.max-candidates:10}")

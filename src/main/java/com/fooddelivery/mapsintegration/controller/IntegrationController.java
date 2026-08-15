@@ -20,9 +20,10 @@ import org.springframework.beans.factory.annotation.Value;
 @RestController
 @RequestMapping("/api")
 @RefreshScope
+@lombok.extern.slf4j.Slf4j
 public class IntegrationController {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(IntegrationController.class);
+
     private final LocationService locationService;
     private final LogisticsDispatchService dispatchService;
     private final FleetTrackingService fleetTrackingService;

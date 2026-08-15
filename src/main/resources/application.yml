@@ -1,4 +1,9 @@
 spring:
+  kafka:
+    listener:
+      observation-enabled: true
+    template:
+      observation-enabled: true
   application:
     name: mapsintegration
   config:
@@ -24,3 +29,13 @@ resilience4j:
         waitDurationInOpenState: 10s
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
+
+
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces

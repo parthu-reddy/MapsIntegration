@@ -18,9 +18,10 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 
 @Service
 @RefreshScope
+@lombok.extern.slf4j.Slf4j
 public class LogisticsDispatchService {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LogisticsDispatchService.class);
+
     private final OlaMapsClient olaMapsClient;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;

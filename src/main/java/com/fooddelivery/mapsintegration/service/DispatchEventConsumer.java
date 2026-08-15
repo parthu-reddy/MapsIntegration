@@ -12,9 +12,10 @@ import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class DispatchEventConsumer {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DispatchEventConsumer.class);
+
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper;
     private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
