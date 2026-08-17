@@ -11,6 +11,8 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @lombok.extern.slf4j.Slf4j
 public class DispatchEventConsumer {
@@ -19,17 +21,35 @@ public class DispatchEventConsumer {
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper;
     private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
+    private final RedisIdempotencyService redisIdempotencyService;
 
-    public DispatchEventConsumer(FleetTrackingService fleetTrackingService, ObjectMapper objectMapper, org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate) {
+    public DispatchEventConsumer(FleetTrackingService fleetTrackingService, ObjectMapper objectMapper, org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate, RedisIdempotencyService redisIdempotencyService) {
         this.fleetTrackingService = fleetTrackingService;
         this.objectMapper = objectMapper;
         this.kafkaTemplate = kafkaTemplate;
+        this.redisIdempotencyService = redisIdempotencyService;
     }
 
     @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true", dltStrategy = DltStrategy.FAIL_ON_ERROR)
     @KafkaListener(topics = com.fooddelivery.common.constants.KafkaConstants.TOPIC_LOGISTICS_DISPATCH, groupId = com.fooddelivery.common.constants.KafkaConstants.GROUP_MAPS_INTEGRATION)
-    public void consumeDispatchEvent(String payload) {
+    public void consumeDispatchEvent(String payload, @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         log.info("Received dispatch event: {}", payload);
+        
+        String extractedEventId = com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
+        final String resolvedEventId;
+        if (extractedEventId == null) {
+            resolvedEventId = UUID.nameUUIDFromBytes(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+        } else {
+            resolvedEventId = extractedEventId;
+        }
+
+        String idempotencyKeyStr = "processed_event:maps:" + resolvedEventId;
+
+        if (redisIdempotencyService.isDuplicate(idempotencyKeyStr)) {
+            log.info("Duplicate dispatch event ignored: {}", idempotencyKeyStr);
+            return;
+        }
+
         try {
             JsonNode rootNode = objectMapper.readTree(payload);
             String orderId = rootNode.path("orderId").asText(null);
