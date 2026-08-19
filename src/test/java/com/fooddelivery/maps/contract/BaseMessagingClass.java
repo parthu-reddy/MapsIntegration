@@ -16,12 +16,19 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootTest(classes = BaseMessagingClass.TestConfig.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@org.springframework.test.context.ActiveProfiles("contract-test")
 @AutoConfigureMessageVerifier
 @EmbeddedKafka(partitions = 1, topics = {"order-events"})
 public abstract class BaseMessagingClass {
 
-    @org.springframework.boot.test.context.TestConfiguration
-    
+    @org.springframework.boot.SpringBootConfiguration
+    @org.springframework.boot.autoconfigure.EnableAutoConfiguration(exclude = {
+            org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
+            org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
+            org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration.class,
+            org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration.class,
+            org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration.class
+    })
     static class TestConfig {
         @Bean
         public KafkaMessageVerifier kafkaMessageVerifier() {
@@ -37,17 +44,26 @@ public abstract class BaseMessagingClass {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    public void fireDispatchCandidateFound() {
-        String payload = """
-{
-  "eventId": "map-777",
-  "type": "DISPATCH_CANDIDATE_FOUND",
-  "payload": {
-    "orderId": 1001,
-    "candidateId": "exec-777"
-  }
-}""";
-        kafkaTemplate.send("order-events", payload);
+    /** Mirrors DispatchEventConsumer: same map, same key, and the same eventType header. */
+    public void fireDispatchCandidateFound() throws Exception {
+        String orderId = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+        java.util.Map<String, Object> eventPayload = java.util.Map.of(
+                "orderId", orderId,
+                "driverIds", java.util.List.of("4f4a4e37-6ca5-5598-94f1-43ef1628f631"),
+                "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(),
+                "deliveryLat", 12.935242,
+                "deliveryLng", 77.624400,
+                "deliveryAddress", "221B Baker Street, Bangalore");
+        org.springframework.messaging.Message<String> message =
+                org.springframework.messaging.support.MessageBuilder
+                        .withPayload(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(eventPayload))
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC,
+                                com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
+                        .setHeader("eventType",
+                                com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name())
+                        .build();
+        kafkaTemplate.send(message);
     }
 
 }
