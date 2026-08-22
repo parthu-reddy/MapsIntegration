@@ -10,16 +10,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @EnableFeignClients
 @SpringBootApplication(
-    scanBasePackages = {"com.fooddelivery.mapsintegration",
-        "com.fooddelivery.common.security",
-        "com.fooddelivery.common.exception",
-        "com.fooddelivery.common.config"},
-    exclude = {
-    org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
-    org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
-    org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration.class,
-    org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration.class
-})
+    scanBasePackages = {"com.fooddelivery.mapsintegration", "com.fooddelivery.common"}
+)
 public class MapsintegrationApplication {
 
 	public static void main(String[] args) {
