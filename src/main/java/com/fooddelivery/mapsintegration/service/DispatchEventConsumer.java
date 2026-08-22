@@ -59,10 +59,12 @@ public class DispatchEventConsumer {
             double deliveryLng = rootNode.path("deliveryLng").asDouble(0.0);
             String deliveryAddress = rootNode.path("deliveryAddress").asText("");
             java.util.List<String> excludedDriverIds = new java.util.ArrayList<>();
-            JsonNode excludedDriversNode = rootNode.path("excludedDriverIds");
-            if (excludedDriversNode.isArray()) {
-                for (JsonNode idNode : excludedDriversNode) {
-                    excludedDriverIds.add(idNode.asText());
+            if (rootNode.has("excludedDriverIds")) {
+                JsonNode excludedDriversNode = rootNode.path("excludedDriverIds");
+                if (excludedDriversNode.isArray()) {
+                    for (JsonNode idNode : excludedDriversNode) {
+                        excludedDriverIds.add(idNode.asText());
+                    }
                 }
             }
             log.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
