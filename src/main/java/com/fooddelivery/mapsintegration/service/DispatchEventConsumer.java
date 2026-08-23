@@ -13,35 +13,30 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class DispatchEventConsumer {
-    @java.lang.SuppressWarnings("all")
 
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper;
     private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
     private final RedisIdempotencyService redisIdempotencyService;
 
-    public DispatchEventConsumer(FleetTrackingService fleetTrackingService, ObjectMapper objectMapper, org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate, RedisIdempotencyService redisIdempotencyService) {
-        this.fleetTrackingService = fleetTrackingService;
-        this.objectMapper = objectMapper;
-        this.kafkaTemplate = kafkaTemplate;
-        this.redisIdempotencyService = redisIdempotencyService;
-    }
 
     @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true", dltStrategy = DltStrategy.FAIL_ON_ERROR)
-    @KafkaListener(topics = com.fooddelivery.common.constants.KafkaConstants.TOPIC_LOGISTICS_DISPATCH, groupId = com.fooddelivery.common.constants.KafkaConstants.GROUP_MAPS_INTEGRATION)
+    @KafkaListener(topics = com.fooddelivery.common.constants.KafkaConstants.TOPIC_LOGISTICS_DISPATCH, groupId = com.fooddelivery.common.constants.KafkaConstants.GROUP_MAPS_INTEGRATION + "-dispatcheventconsumer")
     public void consumeDispatchEvent(String payload, @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
         log.info("Received dispatch event: {}", payload);
         
         String extractedEventId = com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
-        final String resolvedEventId;
         if (extractedEventId == null) {
-            resolvedEventId = UUID.nameUUIDFromBytes(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
-        } else {
-            resolvedEventId = extractedEventId;
+            log.warn("Missing eventId header in dispatch event, falling back to payload hash.");
+            extractedEventId = java.util.UUID.nameUUIDFromBytes(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
         }
+        final String resolvedEventId = extractedEventId;
 
         String idempotencyKeyStr = "processed_event:maps:" + resolvedEventId;
 
@@ -68,14 +63,21 @@ public class DispatchEventConsumer {
                 }
             }
             log.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
-            String cityId = com.fooddelivery.common.constants.AppConstants.DEFAULT_CITY_ID;
+            String cityId = "BLR";
             String restaurantCoords = restaurantLat + "," + restaurantLng;
             // FleetTrackingService contains the mock Redis logic for assigning a driver.
             java.util.List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds);
             if (driverIds != null && !driverIds.isEmpty()) {
                 log.info("Successfully dispatched drivers {} for order {}", driverIds, orderId);
                 java.util.Map<String, Object> eventPayload = java.util.Map.of("orderId", orderId, "driverIds", driverIds, "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), "deliveryLat", deliveryLat, "deliveryLng", deliveryLng, "deliveryAddress", deliveryAddress);
-                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder.withPayload(objectMapper.writeValueAsString(eventPayload)).setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS).setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId).setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name()).build();
+                // Deliberately synchronous (bypassing outbox) to minimize latency for dispatch results
+                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
+                        .withPayload(objectMapper.writeValueAsString(eventPayload))
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
+                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name())
+                        .setHeader("eventId", UUID.randomUUID().toString())
+                        .build();
                 try {
                     log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
@@ -86,7 +88,14 @@ public class DispatchEventConsumer {
             } else {
                 log.warn("No drivers available for order {}", orderId);
                 java.util.Map<String, Object> eventPayload = java.util.Map.of("orderId", orderId, "eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name());
-                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder.withPayload(objectMapper.writeValueAsString(eventPayload)).setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS).setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId).setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name()).build();
+                // Deliberately synchronous (bypassing outbox) to minimize latency for dispatch results
+                org.springframework.messaging.Message<String> message = org.springframework.messaging.support.MessageBuilder
+                        .withPayload(objectMapper.writeValueAsString(eventPayload))
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
+                        .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
+                        .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name())
+                        .setHeader("eventId", UUID.randomUUID().toString())
+                        .build();
                 try {
                     log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);

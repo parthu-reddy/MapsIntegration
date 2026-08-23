@@ -9,19 +9,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class LocationService {
-    @java.lang.SuppressWarnings("all")
 
     private final OlaMapsClient olaMapsClient;
     @Value("${olamaps.api.key}")
     private String apiKey;
 
-    @Autowired
-    public LocationService(OlaMapsClient olaMapsClient) {
-        this.olaMapsClient = olaMapsClient;
-    }
 
     @Tool(description = "Get autocomplete suggestions for a given input query using Ola Maps Places API. Useful for finding location names.")
     public List<Map<String, Object>> getAutocompleteSuggestions(String input, Double userLat, Double userLng) {

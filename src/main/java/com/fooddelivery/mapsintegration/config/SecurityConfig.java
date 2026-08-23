@@ -10,8 +10,5 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 @Import(CommonSecurityConfig.class)
 public class SecurityConfig {
 
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().requestMatchers("/api/config/maps-key", "/actuator/refresh");
-    }
+
 }

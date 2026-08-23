@@ -7,23 +7,21 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
+import lombok.RequiredArgsConstructor;
+
 @Configuration
 @EnableWebSocket
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final TrackingWebSocketHandler trackingWebSocketHandler;
-    private final com.fooddelivery.common.security.WebSocketSecurityInterceptor securityInterceptor;
+    private final com.fooddelivery.common.security.WebSocketSecurityInterceptor securityInterceptor = new com.fooddelivery.common.security.WebSocketSecurityInterceptor();
 
-    @Autowired
-    public WebSocketConfig(TrackingWebSocketHandler trackingWebSocketHandler) {
-        this.trackingWebSocketHandler = trackingWebSocketHandler;
-        this.securityInterceptor = new com.fooddelivery.common.security.WebSocketSecurityInterceptor();
-    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(trackingWebSocketHandler, "/api/maps/tracking")
-                .setAllowedOrigins("*")
+                .setAllowedOrigins(com.fooddelivery.common.constants.AppConstants.ALLOWED_ORIGINS)
                 .addInterceptors(securityInterceptor);
     }
 }

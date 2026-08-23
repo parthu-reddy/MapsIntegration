@@ -7,18 +7,16 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.HashMap;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class MapsMcpService {
-    @java.lang.SuppressWarnings("all")
 
     private final IntegrationController integrationController;
     private final ObjectMapper objectMapper;
 
-    public MapsMcpService(IntegrationController integrationController, ObjectMapper objectMapper) {
-        this.integrationController = integrationController;
-        this.objectMapper = objectMapper;
-    }
 
     @Tool(description = "Autocomplete places search. Provide query and optional lat, lng.")
     public String autocomplete(String input, Double lat, Double lng) {

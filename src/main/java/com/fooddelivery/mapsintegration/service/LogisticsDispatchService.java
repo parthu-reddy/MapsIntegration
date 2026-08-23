@@ -16,24 +16,19 @@ import java.time.Duration;
 
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @RefreshScope
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class LogisticsDispatchService {
-    @java.lang.SuppressWarnings("all")
 
     private final OlaMapsClient olaMapsClient;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
     @Value("${olamaps.api.key}")
     private String apiKey;
-
-    @Autowired
-    public LogisticsDispatchService(OlaMapsClient olaMapsClient, RedisTemplate<String, String> redisTemplate) {
-        this.olaMapsClient = olaMapsClient;
-        this.redisTemplate = redisTemplate;
-        this.objectMapper = new ObjectMapper();
-    }
 
     @Tool(description = "Evaluate driver estimated time of arrivals (ETAs) by querying the Ola Maps Routing API for driving distance matrix between candidates and the restaurant.")
     @CircuitBreaker(name = "olaMapsRouting", fallbackMethod = "evaluateDriverETAsFallback")
@@ -150,6 +145,5 @@ public class LogisticsDispatchService {
         System.err.println("Circuit breaker open or API failed for distance. Error: " + t.getMessage());
         throw new IllegalArgumentException("Routing service unavailable. Cannot compute delivery distance.", t);
     }
-
 
 }

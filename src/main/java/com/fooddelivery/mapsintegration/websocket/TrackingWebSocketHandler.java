@@ -17,23 +17,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
+
 @Component
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class TrackingWebSocketHandler extends TextWebSocketHandler {
-    @java.lang.SuppressWarnings("all")
 
     private final FleetTrackingService fleetTrackingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Sinks.Many<LocationUpdate> sink = Sinks.many().unicast().onBackpressureBuffer();
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
-    @Autowired
-    public TrackingWebSocketHandler(FleetTrackingService fleetTrackingService) {
-        this.fleetTrackingService = fleetTrackingService;
-    }
 
     @PostConstruct
     public void init() {
-        sink.asFlux().onBackpressureDrop(update -> System.err.println("Dropped location ping due to backpressure: " + update.driverId)).bufferTimeout(1000, Duration.ofMillis(500)).publishOn(reactor.core.scheduler.Schedulers.boundedElastic()).subscribe(this::flushBatch);
+        sink.asFlux().onBackpressureDrop(update -> log.error("Dropped location ping due to backpressure: " + update.driverId)).bufferTimeout(1000, Duration.ofMillis(500)).publishOn(reactor.core.scheduler.Schedulers.boundedElastic()).subscribe(this::flushBatch);
     }
 
     @PreDestroy
@@ -45,7 +44,7 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String userId = (String) session.getAttributes().get("userId");
         if (userId == null) {
-            System.err.println("Unauthorized WebSocket connection attempt (missing userId in session): " + session.getId());
+            log.error("Unauthorized WebSocket connection attempt (missing userId in session): {}", session.getId());
             session.close(CloseStatus.NOT_ACCEPTABLE);
             return;
         }
@@ -55,16 +54,26 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try {
+            String sessionUser = (String) session.getAttributes().get("userId");
             JsonNode payload = objectMapper.readTree(message.getPayload());
-            String driverId = payload.has("driverId") ? payload.get("driverId").asText() : null;
+            // Take driverId from session, rather than trusting the payload
+            String driverId = sessionUser;
+            String payloadDriverId = payload.has("driverId") ? payload.get("driverId").asText() : null;
+            
+            if (payloadDriverId != null && !driverId.equals(payloadDriverId)) {
+                log.warn("Driver ID mismatch: session user {}, payload driver {}", driverId, payloadDriverId);
+                meterRegistry.counter("ws.telemetry.identity_mismatch").increment();
+                return; // drop; do not close — a buggy client should not be able to self-DoS
+            }
+            
             String cityId = payload.has("cityId") ? payload.get("cityId").asText() : null;
-            if (driverId != null && cityId != null && payload.has("lat") && payload.has("lng")) {
+            if (cityId != null && payload.has("lat") && payload.has("lng")) {
                 double lat = payload.get("lat").asDouble();
                 double lng = payload.get("lng").asDouble();
                 sink.tryEmitNext(new LocationUpdate(cityId, driverId, lat, lng));
             }
         } catch (Exception e) {
-            System.err.println("Failed to parse WebSocket message: " + e.getMessage());
+            log.error("Failed to parse WebSocket message", e);
         }
     }
 
@@ -84,11 +93,10 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
             try {
                 fleetTrackingService.updateDriverLocation(update.cityId, update.driverId, update.lat, update.lng);
             } catch (Exception e) {
-                System.err.println("Failed to flush to Redis: " + e.getMessage());
+                log.error("Failed to flush to Redis", e);
             }
         });
     }
-
 
     private static class LocationUpdate {
         String cityId;

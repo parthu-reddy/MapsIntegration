@@ -18,21 +18,19 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.ai.tool.annotation.Tool;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class FleetTrackingService {
-    @java.lang.SuppressWarnings("all")
 
     private final RedisTemplate<String, String> redisTemplate;
     private final LogisticsDispatchService dispatchService;
     @org.springframework.beans.factory.annotation.Value("${dispatch.max-candidates:10}")
     private int maxCandidates;
 
-    @Autowired
-    public FleetTrackingService(RedisTemplate<String, String> redisTemplate, LogisticsDispatchService dispatchService) {
-        this.redisTemplate = redisTemplate;
-        this.dispatchService = dispatchService;
-    }
+
 
     @Tool(description = "Update the real-time geographical location coordinates (latitude and longitude) of a driver in the city.")
     public void updateDriverLocation(String cityId, String driverId, double lat, double lng) {
@@ -192,7 +190,6 @@ public class FleetTrackingService {
         }
         return false;
     }
-
 
     private static class DriverCandidate {
         String id;

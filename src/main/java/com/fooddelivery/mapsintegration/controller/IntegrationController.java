@@ -17,12 +17,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.beans.factory.annotation.Value;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api")
 @RefreshScope
 @lombok.extern.slf4j.Slf4j
+@RequiredArgsConstructor
 public class IntegrationController {
-    @java.lang.SuppressWarnings("all")
 
     private final LocationService locationService;
     private final LogisticsDispatchService dispatchService;
@@ -30,13 +32,6 @@ public class IntegrationController {
 
     @Value("${olamaps.api.key}")
     private String olaMapsApiKey;
-
-    @Autowired
-    public IntegrationController(LocationService locationService, LogisticsDispatchService dispatchService, FleetTrackingService fleetTrackingService) {
-        this.locationService = locationService;
-        this.dispatchService = dispatchService;
-        this.fleetTrackingService = fleetTrackingService;
-    }
 
     @GetMapping("/places/autocomplete")
     @PreAuthorize("hasAnyRole(\'CUSTOMER\', \'RESTAURANT\', \'DELIVERY\')")
@@ -90,6 +85,7 @@ public class IntegrationController {
     }
 
     @PostMapping("/fleet/availability")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> setAvailability(@Valid @RequestBody SetAvailabilityRequest payload) {
         String cityId = payload.getCityId();
         String driverId = payload.getDriverId();
@@ -101,6 +97,7 @@ public class IntegrationController {
     }
 
     @PostMapping("/fleet/release")
+    @PreAuthorize("hasRole('DELIVERY')")
     public ResponseEntity<?> releaseDriver(@Valid @RequestBody SetAvailabilityRequest payload) {
         String cityId = payload.getCityId();
         String driverId = payload.getDriverId();
@@ -153,13 +150,6 @@ public class IntegrationController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(location);
-    }
-
-    @GetMapping("/config/maps-key")
-    public ResponseEntity<?> getMapsKey() {
-        Map<String, String> response = new HashMap<>();
-        response.put("key", olaMapsApiKey);
-        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/fleet/driver")
