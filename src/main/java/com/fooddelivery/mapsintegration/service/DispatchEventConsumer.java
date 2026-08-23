@@ -33,8 +33,7 @@ public class DispatchEventConsumer {
         
         String extractedEventId = com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
         if (extractedEventId == null) {
-            log.warn("Missing eventId header in dispatch event, falling back to payload hash.");
-            extractedEventId = java.util.UUID.nameUUIDFromBytes(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+            throw new IllegalArgumentException("Missing eventId header");
         }
         final String resolvedEventId = extractedEventId;
 

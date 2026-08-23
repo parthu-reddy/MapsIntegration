@@ -59,7 +59,7 @@ class DispatchEventConsumerTest {
         future.complete(null);
         when(kafkaTemplate.send((org.springframework.messaging.Message<String>) any())).thenReturn(future);
 
-        dispatchEventConsumer.consumeDispatchEvent(payload, Collections.emptyMap());
+        dispatchEventConsumer.consumeDispatchEvent(payload, java.util.Map.of("eventId", java.util.UUID.randomUUID().toString()));
         // Simple mock interaction check can be added
     }
 
@@ -67,7 +67,7 @@ class DispatchEventConsumerTest {
     void testConsumeDispatchEvent_duplicate() throws Exception {
         String payload = "{}";
         when(redisIdempotencyService.isDuplicate(any())).thenReturn(true);
-        dispatchEventConsumer.consumeDispatchEvent(payload, Collections.emptyMap());
+        dispatchEventConsumer.consumeDispatchEvent(payload, java.util.Map.of("eventId", java.util.UUID.randomUUID().toString()));
         // Verify we don't process further
     }
 }
