@@ -1,1 +1,620 @@
-{"openapi":"3.0.1","info":{"title":"OpenAPI definition","version":"v0"},"servers":[{"url":"http://localhost:8083","description":"Generated server url"}],"paths":{"/api/logistics/dispatch":{"post":{"tags":["integration-controller"],"operationId":"dispatchOrder","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DispatchOrderRequest"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/release":{"post":{"tags":["integration-controller"],"operationId":"releaseDriver","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SetAvailabilityRequest"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/location":{"get":{"tags":["integration-controller"],"operationId":"getDriverLocation","parameters":[{"name":"cityId","in":"query","required":true,"schema":{"type":"string"}},{"name":"driverId","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}},"post":{"tags":["integration-controller"],"operationId":"updateLocation","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateLocationRequest"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/availability":{"post":{"tags":["integration-controller"],"operationId":"setAvailability","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SetAvailabilityRequest"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/places/reverse-geocode":{"get":{"tags":["integration-controller"],"operationId":"reverseGeocode","parameters":[{"name":"lat","in":"query","required":true,"schema":{"type":"number","format":"double"}},{"name":"lng","in":"query","required":true,"schema":{"type":"number","format":"double"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/places/autocomplete":{"get":{"tags":["integration-controller"],"operationId":"autocomplete","parameters":[{"name":"input","in":"query","required":true,"schema":{"type":"string"}},{"name":"lat","in":"query","required":false,"schema":{"type":"number","format":"double"}},{"name":"lng","in":"query","required":false,"schema":{"type":"number","format":"double"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/logistics/route":{"get":{"tags":["integration-controller"],"operationId":"getRoute","parameters":[{"name":"origin","in":"query","required":true,"schema":{"type":"string"}},{"name":"destination","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/logistics/distance":{"get":{"tags":["integration-controller"],"operationId":"getDistance","parameters":[{"name":"origin","in":"query","required":true,"schema":{"type":"string"}},{"name":"destination","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/nearby":{"get":{"tags":["integration-controller"],"operationId":"getNearbyDrivers","parameters":[{"name":"cityId","in":"query","required":true,"schema":{"type":"string"}},{"name":"lat","in":"query","required":true,"schema":{"type":"number","format":"double"}},{"name":"lng","in":"query","required":true,"schema":{"type":"number","format":"double"}},{"name":"radius","in":"query","required":false,"schema":{"type":"number","format":"double","default":5.0}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/available":{"get":{"tags":["integration-controller"],"operationId":"getAvailableDrivers","parameters":[{"name":"cityId","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/availability/check":{"get":{"tags":["integration-controller"],"operationId":"checkDriverAvailability","parameters":[{"name":"cityId","in":"query","required":true,"schema":{"type":"string"}},{"name":"lat","in":"query","required":true,"schema":{"type":"number","format":"double"}},{"name":"lng","in":"query","required":true,"schema":{"type":"number","format":"double"}},{"name":"radius","in":"query","required":false,"schema":{"type":"number","format":"double","default":5.0}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/config/maps-key":{"get":{"tags":["integration-controller"],"operationId":"getMapsKey","responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}},"/api/fleet/driver":{"delete":{"tags":["integration-controller"],"operationId":"deleteDriver","parameters":[{"name":"cityId","in":"query","required":true,"schema":{"type":"string"}},{"name":"driverId","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"object"}}}}}}}},"components":{"schemas":{"DispatchOrderRequest":{"required":["cityId","restaurantCoords"],"type":"object","properties":{"cityId":{"maxLength":50,"minLength":0,"pattern":"^[A-Za-z0-9_\\-]+$","type":"string"},"restaurantCoords":{"maxLength":50,"minLength":0,"pattern":"^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$","type":"string"}}},"SetAvailabilityRequest":{"required":["available","cityId","driverId"],"type":"object","properties":{"cityId":{"maxLength":50,"minLength":0,"pattern":"^[A-Za-z0-9_\\-]+$","type":"string"},"driverId":{"maxLength":36,"minLength":0,"pattern":"^[0-9a-fA-F\\-]{36}$","type":"string"},"available":{"type":"boolean"}}},"UpdateLocationRequest":{"required":["cityId","driverId","lat","lng"],"type":"object","properties":{"cityId":{"maxLength":50,"minLength":0,"pattern":"^[A-Za-z0-9_\\-]+$","type":"string"},"driverId":{"maxLength":36,"minLength":0,"pattern":"^[0-9a-fA-F\\-]{36}$","type":"string"},"lat":{"type":"number","format":"double"},"lng":{"type":"number","format":"double"}}}}}}
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8083",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/api/logistics/dispatch": {
+      "post": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "dispatchOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispatchOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/release": {
+      "post": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "releaseDriver",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAvailabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/location": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "getDriverLocation",
+        "parameters": [
+          {
+            "name": "cityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "driverId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "updateLocation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/availability": {
+      "post": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "setAvailability",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAvailabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/places/reverse-geocode": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "reverseGeocode",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/places/autocomplete": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "autocomplete",
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logistics/route": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "getRoute",
+        "parameters": [
+          {
+            "name": "origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logistics/distance": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "getDistance",
+        "parameters": [
+          {
+            "name": "origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "destination",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/nearby": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "getNearbyDrivers",
+        "parameters": [
+          {
+            "name": "cityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "default": 5.0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/available": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "getAvailableDrivers",
+        "parameters": [
+          {
+            "name": "cityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/availability/check": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "checkDriverAvailability",
+        "parameters": [
+          {
+            "name": "cityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "default": 5.0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config/maps-key": {
+      "get": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "getMapsKey",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fleet/driver": {
+      "delete": {
+        "tags": [
+          "integration-controller"
+        ],
+        "operationId": "deleteDriver",
+        "parameters": [
+          {
+            "name": "cityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "driverId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DispatchOrderRequest": {
+        "required": [
+          "cityId",
+          "restaurantCoords"
+        ],
+        "type": "object",
+        "properties": {
+          "cityId": {
+            "maxLength": 50,
+            "minLength": 0,
+            "pattern": "^[A-Za-z0-9_\\-]+$",
+            "type": "string"
+          },
+          "restaurantCoords": {
+            "maxLength": 50,
+            "minLength": 0,
+            "pattern": "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$",
+            "type": "string"
+          }
+        }
+      },
+      "SetAvailabilityRequest": {
+        "required": [
+          "available",
+          "cityId",
+          "driverId"
+        ],
+        "type": "object",
+        "properties": {
+          "cityId": {
+            "maxLength": 50,
+            "minLength": 0,
+            "pattern": "^[A-Za-z0-9_\\-]+$",
+            "type": "string"
+          },
+          "driverId": {
+            "maxLength": 36,
+            "minLength": 0,
+            "pattern": "^[0-9a-fA-F\\-]{36}$",
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateLocationRequest": {
+        "required": [
+          "cityId",
+          "driverId",
+          "lat",
+          "lng"
+        ],
+        "type": "object",
+        "properties": {
+          "cityId": {
+            "maxLength": 50,
+            "minLength": 0,
+            "pattern": "^[A-Za-z0-9_\\-]+$",
+            "type": "string"
+          },
+          "driverId": {
+            "maxLength": 36,
+            "minLength": 0,
+            "pattern": "^[0-9a-fA-F\\-]{36}$",
+            "type": "string"
+          },
+          "lat": {
+            "type": "number",
+            "format": "double"
+          },
+          "lng": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      }
+    }
+  }
+}
