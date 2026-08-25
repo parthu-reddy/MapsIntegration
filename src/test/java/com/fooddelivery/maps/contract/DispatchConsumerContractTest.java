@@ -41,6 +41,7 @@ class DispatchConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    
     @Import(DispatchEventConsumer.class)
     static class TestConfig {
         @Bean
