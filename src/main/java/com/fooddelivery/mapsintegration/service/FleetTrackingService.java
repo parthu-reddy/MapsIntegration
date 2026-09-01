@@ -157,7 +157,7 @@ public class FleetTrackingService {
         // Remove dispatched drivers from the available pool to prevent double-dispatching.
         // They will be added back by releaseDriver() on reject or timeout.
         if (!topCandidates.isEmpty()) {
-            redisTemplate.opsForSet().remove(availKey, topCandidates.toArray(new String[0]));
+            redisTemplate.opsForSet().remove(availKey, topCandidates.toArray());
             log.info("Removed {} dispatched drivers from available pool: {}", topCandidates.size(), topCandidates);
         }
         return topCandidates.isEmpty() ? null : topCandidates;
