@@ -47,10 +47,17 @@ public class DispatchEventConsumer {
         try {
             JsonNode rootNode = objectMapper.readTree(payload);
             String orderId = rootNode.path("orderId").asText(null);
-            double restaurantLat = rootNode.path("restaurantLat").asDouble(12.9716);
-            double restaurantLng = rootNode.path("restaurantLng").asDouble(77.5946);
-            double deliveryLat = rootNode.path("deliveryLat").asDouble(0.0);
-            double deliveryLng = rootNode.path("deliveryLng").asDouble(0.0);
+            // Fail fast if coordinates are missing — never use hardcoded fallback values per Financial Integrity rule
+            if (!rootNode.has("restaurantLat") || !rootNode.has("restaurantLng")) {
+                throw new IllegalArgumentException("Missing restaurant coordinates in dispatch payload for order: " + orderId);
+            }
+            double restaurantLat = rootNode.path("restaurantLat").asDouble();
+            double restaurantLng = rootNode.path("restaurantLng").asDouble();
+            if (!rootNode.has("deliveryLat") || !rootNode.has("deliveryLng")) {
+                throw new IllegalArgumentException("Missing delivery coordinates in dispatch payload for order: " + orderId);
+            }
+            double deliveryLat = rootNode.path("deliveryLat").asDouble();
+            double deliveryLng = rootNode.path("deliveryLng").asDouble();
             String deliveryAddress = rootNode.path("deliveryAddress").asText("");
             java.util.List<String> excludedDriverIds = new java.util.ArrayList<>();
             if (rootNode.has("excludedDriverIds")) {

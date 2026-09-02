@@ -52,7 +52,14 @@ class DispatchEventConsumerTest {
         when(mockOrderIdNode.asText(any())).thenReturn("testOrderId");
         when(mockNode.asText()).thenReturn("dummy");
         when(mockNode.asDouble(anyDouble())).thenReturn(0.0);
+        when(mockNode.asDouble()).thenReturn(12.9716);
         when(mockNode.asText(any())).thenReturn("dummy");
+        // Mock has() for fail-fast coordinate validation
+        when(mockNode.has("restaurantLat")).thenReturn(true);
+        when(mockNode.has("restaurantLng")).thenReturn(true);
+        when(mockNode.has("deliveryLat")).thenReturn(true);
+        when(mockNode.has("deliveryLng")).thenReturn(true);
+        when(mockNode.has("excludedDriverIds")).thenReturn(false);
         when(redisIdempotencyService.isDuplicate(any())).thenReturn(false);
         
         java.util.concurrent.CompletableFuture<org.springframework.kafka.support.SendResult<String, String>> future = new java.util.concurrent.CompletableFuture<>();
