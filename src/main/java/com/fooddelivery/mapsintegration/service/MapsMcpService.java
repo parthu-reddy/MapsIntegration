@@ -39,7 +39,7 @@ public class MapsMcpService {
     @Tool(description = "Dispatch an order to an available driver. Provide cityId and restaurantCoords (lat,lng).")
     public String dispatchOrder(String cityId, String restaurantCoords) {
         try {
-            com.fooddelivery.mapsintegration.dto.DispatchOrderRequest payload = new com.fooddelivery.mapsintegration.dto.DispatchOrderRequest();
+            com.fooddelivery.common.dto.maps.DispatchOrderRequest payload = new com.fooddelivery.common.dto.maps.DispatchOrderRequest();
             payload.setCityId(cityId);
             payload.setRestaurantCoords(restaurantCoords);
             return objectMapper.writeValueAsString(integrationController.dispatchOrder(payload).getBody());
@@ -60,7 +60,7 @@ public class MapsMcpService {
     @Tool(description = "Set driver availability. Provide cityId, driverId, and boolean available.")
     public String setAvailability(String cityId, String driverId, boolean available) {
         try {
-            com.fooddelivery.mapsintegration.dto.SetAvailabilityRequest payload = new com.fooddelivery.mapsintegration.dto.SetAvailabilityRequest();
+            com.fooddelivery.common.dto.maps.SetAvailabilityRequest payload = new com.fooddelivery.common.dto.maps.SetAvailabilityRequest();
             payload.setCityId(cityId);
             payload.setDriverId(driverId);
             payload.setAvailable(available);
@@ -91,7 +91,7 @@ public class MapsMcpService {
     @Tool(description = "Update driver location. Provide cityId, driverId, lat, and lng.")
     public String updateLocation(String cityId, String driverId, double lat, double lng) {
         try {
-            com.fooddelivery.mapsintegration.dto.UpdateLocationRequest payload = new com.fooddelivery.mapsintegration.dto.UpdateLocationRequest();
+            com.fooddelivery.common.dto.maps.UpdateLocationRequest payload = new com.fooddelivery.common.dto.maps.UpdateLocationRequest();
             payload.setCityId(cityId);
             payload.setDriverId(driverId);
             payload.setLat(lat);
