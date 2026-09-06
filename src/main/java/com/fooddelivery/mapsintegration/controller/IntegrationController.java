@@ -35,18 +35,19 @@ public class IntegrationController {
 
     @GetMapping("/places/autocomplete")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY', 'SERVICE')")
-    public ResponseEntity<?> autocomplete(@RequestParam String input, @RequestParam(required = false) Double lat, @RequestParam(required = false) Double lng) {
-        List<Map<String, Object>> suggestions = locationService.getAutocompleteSuggestions(input, lat, lng);
+    public ResponseEntity<List<com.fooddelivery.mapsintegration.dto.AutocompleteResponse>> autocomplete(@RequestParam String input, @RequestParam(required = false) Double lat, @RequestParam(required = false) Double lng) {
+        List<Map<String, Object>> result = locationService.getAutocompleteSuggestions(input, lat, lng);
+        List<com.fooddelivery.mapsintegration.dto.AutocompleteResponse> suggestions = result.stream()
+                .map(m -> new com.fooddelivery.mapsintegration.dto.AutocompleteResponse((String) m.get("description"), (String) m.get("placeId")))
+                .toList();
         return ResponseEntity.ok(suggestions);
     }
 
     @GetMapping("/places/reverse-geocode")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY', 'SERVICE')")
-    public ResponseEntity<?> reverseGeocode(@RequestParam double lat, @RequestParam double lng) {
+    public ResponseEntity<com.fooddelivery.mapsintegration.dto.ReverseGeocodeResponse> reverseGeocode(@RequestParam double lat, @RequestParam double lng) {
         String address = locationService.resolveCoordinatesToAddress(lat, lng);
-        Map<String, String> response = new HashMap<>();
-        response.put("address", address);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new com.fooddelivery.mapsintegration.dto.ReverseGeocodeResponse(address));
     }
 
     @PostMapping("/logistics/dispatch")
@@ -70,9 +71,17 @@ public class IntegrationController {
 
     @GetMapping("/logistics/route")
     @PreAuthorize("hasAnyRole('DELIVERY', 'CUSTOMER', 'RESTAURANT', 'SERVICE')")
-    public ResponseEntity<?> getRoute(@RequestParam String origin, @RequestParam String destination) {
+    public ResponseEntity<com.fooddelivery.common.dto.ApiResponse<com.fooddelivery.mapsintegration.dto.RoutePolylineDto>> getRoute(@RequestParam String origin, @RequestParam String destination) {
         Map<String, Object> routeInfo = dispatchService.generateTurnByTurnDirections(origin, destination);
-        return ResponseEntity.ok(routeInfo);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> steps = routeInfo.get("steps") != null ? (List<Map<String, Object>>) routeInfo.get("steps") : null;
+        com.fooddelivery.mapsintegration.dto.RoutePolylineDto dto = com.fooddelivery.mapsintegration.dto.RoutePolylineDto.builder()
+            .polyline((String) routeInfo.get("polyline"))
+            .distance((String) routeInfo.get("distance"))
+            .duration((String) routeInfo.get("duration"))
+            .steps(steps)
+            .build();
+        return ResponseEntity.ok(com.fooddelivery.common.dto.ApiResponse.success(dto, "Route calculated successfully"));
     }
 
     @GetMapping("/logistics/distance")

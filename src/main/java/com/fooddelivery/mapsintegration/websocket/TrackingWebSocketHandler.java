@@ -55,10 +55,10 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try {
             String sessionUser = (String) session.getAttributes().get("userId");
-            JsonNode payload = objectMapper.readTree(message.getPayload());
+            com.fooddelivery.mapsintegration.dto.FleetTrackingUpdateDto payload = objectMapper.readValue(message.getPayload(), com.fooddelivery.mapsintegration.dto.FleetTrackingUpdateDto.class);
             // Take driverId from session, rather than trusting the payload
             String driverId = sessionUser;
-            String payloadDriverId = payload.has("driverId") ? payload.get("driverId").asText() : null;
+            String payloadDriverId = payload.getDriverId();
             
             if (payloadDriverId != null && !driverId.equals(payloadDriverId)) {
                 log.warn("Driver ID mismatch: session user {}, payload driver {}", driverId, payloadDriverId);
@@ -66,10 +66,10 @@ public class TrackingWebSocketHandler extends TextWebSocketHandler {
                 return; // drop; do not close — a buggy client should not be able to self-DoS
             }
             
-            String cityId = payload.has("cityId") ? payload.get("cityId").asText() : null;
-            if (cityId != null && payload.has("lat") && payload.has("lng")) {
-                double lat = payload.get("lat").asDouble();
-                double lng = payload.get("lng").asDouble();
+            String cityId = payload.getCityId();
+            if (cityId != null && payload.getLat() != null && payload.getLng() != null) {
+                double lat = payload.getLat();
+                double lng = payload.getLng();
                 sink.tryEmitNext(new LocationUpdate(cityId, driverId, lat, lng));
             }
         } catch (Exception e) {
