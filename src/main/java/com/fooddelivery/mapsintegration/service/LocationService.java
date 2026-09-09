@@ -39,6 +39,40 @@ public class LocationService {
     }
 
     @Tool(description = "Resolve latitude and longitude coordinates into a human-readable street address using Ola Maps Reverse Geocoding API.")
+    /**
+     * An address to coordinates.
+     *
+     * <p>Added 2026-09-09. The customer address flow always needed this: autocomplete returns only
+     * {@code description} and {@code placeId} -- {@code AutocompleteResponse} carries no geometry --
+     * so the UI's "no geometry, fall back to geocode" branch ran on every selection, against
+     * {@code /api/places/geocode}, which no service had ever implemented. Picking an address never
+     * resolved to a point.
+     *
+     * @return {@code null} when the address cannot be resolved, so the caller can say so rather
+     *         than silently placing the customer at (0, 0).
+     */
+    public Map<String, Double> resolveAddressToCoordinates(String address) {
+        try {
+            Map<String, Object> response = olaMapsClient.geocode(address, apiKey);
+            if (response != null && response.containsKey("geocodingResults")) {
+                List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("geocodingResults");
+                if (results != null && !results.isEmpty()) {
+                    Map<String, Object> geometry = (Map<String, Object>) results.get(0).get("geometry");
+                    if (geometry != null) {
+                        Map<String, Object> location = (Map<String, Object>) geometry.get("location");
+                        if (location != null && location.get("lat") != null && location.get("lng") != null) {
+                            return Map.of("lat", ((Number) location.get("lat")).doubleValue(),
+                                          "lng", ((Number) location.get("lng")).doubleValue());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to resolve address to coordinates", e);
+        }
+        return null;
+    }
+
     public String resolveCoordinatesToAddress(double lat, double lng) {
         try {
             String latlng = lat + "," + lng;

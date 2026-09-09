@@ -11,6 +11,11 @@ public class OlaMapsClientFallback implements OlaMapsClient {
     }
 
     @Override
+    public Map<String, Object> geocode(String address, String apiKey) {
+        throw new IllegalStateException("Ola maps service is currently unavailable.");
+    }
+
+    @Override
     public Map<String, Object> reverseGeocode(String latlng, String apiKey) {
         throw new IllegalStateException("Ola maps service is currently unavailable.");
     }

@@ -179,7 +179,37 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ReverseGeocodeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/places/geocode" : {
+      "get" : {
+        "tags" : [ "integration-controller" ],
+        "operationId" : "geocode",
+        "parameters" : [ {
+          "name" : "address",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "number",
+                    "format" : "double"
+                  }
                 }
               }
             }
@@ -221,7 +251,10 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AutocompleteResponse"
+                  }
                 }
               }
             }
@@ -254,7 +287,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ApiResponseRoutePolylineDto"
                 }
               }
             }
@@ -521,6 +554,70 @@
           "lng" : {
             "type" : "number",
             "format" : "double"
+          }
+        }
+      },
+      "ReverseGeocodeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "address" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AutocompleteResponse" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "placeId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ApiResponseRoutePolylineDto" : {
+        "required" : [ "message", "success", "timestamp" ],
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "errorCode" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/RoutePolylineDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "RoutePolylineDto" : {
+        "type" : "object",
+        "properties" : {
+          "polyline" : {
+            "type" : "string"
+          },
+          "distance" : {
+            "type" : "string"
+          },
+          "duration" : {
+            "type" : "string"
+          },
+          "steps" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "additionalProperties" : {
+                "type" : "object"
+              }
+            }
           }
         }
       }

@@ -15,6 +15,12 @@ public interface OlaMapsClient {
             @RequestParam(value = "location", required = false) String location,
             @RequestParam("api_key") String apiKey);
 
+    /** Forward geocoding: an address string to coordinates. */
+    @GetMapping("/places/v1/geocode")
+    Map<String, Object> geocode(
+            @RequestParam("address") String address,
+            @RequestParam("api_key") String apiKey);
+
     @GetMapping("/places/v1/reverse-geocode")
     Map<String, Object> reverseGeocode(
             @RequestParam("latlng") String latlng,

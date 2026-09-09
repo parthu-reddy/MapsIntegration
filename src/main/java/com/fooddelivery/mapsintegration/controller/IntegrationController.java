@@ -43,6 +43,14 @@ public class IntegrationController {
         return ResponseEntity.ok(suggestions);
     }
 
+    @GetMapping("/places/geocode")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY', 'SERVICE')")
+    public ResponseEntity<Map<String, Double>> geocode(@RequestParam String address) {
+        Map<String, Double> location = locationService.resolveAddressToCoordinates(address);
+        // 404, not an empty body: the caller places a pin with this, and {} would read as (0, 0).
+        return location == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(location);
+    }
+
     @GetMapping("/places/reverse-geocode")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'RESTAURANT', 'DELIVERY', 'SERVICE')")
     public ResponseEntity<com.fooddelivery.mapsintegration.dto.ReverseGeocodeResponse> reverseGeocode(@RequestParam double lat, @RequestParam double lng) {
