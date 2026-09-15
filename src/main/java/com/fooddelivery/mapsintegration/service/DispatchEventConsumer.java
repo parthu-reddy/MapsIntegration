@@ -40,11 +40,15 @@ public class DispatchEventConsumer {
 
         String idempotencyKeyStr = "processed_event:maps:" + resolvedEventId;
 
-        if (redisIdempotencyService.isDuplicate(idempotencyKeyStr)) {
-            log.info("Duplicate dispatch event ignored: {}", idempotencyKeyStr);
+        String claimToken = redisIdempotencyService.beginProcessing(idempotencyKeyStr);
+        if (claimToken == null) {
+            log.info("Dispatch event is already processing or completed: {}", idempotencyKeyStr);
             return;
         }
 
+        String reservedCityId = null;
+        java.util.List<String> reservedDriverIds = java.util.Collections.emptyList();
+        boolean resultPublished = false;
         try {
             // The four coordinates are @NotNull on the event, so the fail-fast that used to be
             // written as `if (!rootNode.has("restaurantLat")) throw` is now a constraint checked at
@@ -59,11 +63,13 @@ public class DispatchEventConsumer {
             String deliveryAddress = request.getDeliveryAddress() != null ? request.getDeliveryAddress() : "";
             java.util.List<String> excludedDriverIds = request.getExcludedDriverIds() != null
                     ? request.getExcludedDriverIds() : new java.util.ArrayList<>();
+            String cityId = request.getDispatchCityId();
+            double fleetSearchRadiusKm = request.getFleetSearchRadiusKm();
             log.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
-            String cityId = "BLR";
             String restaurantCoords = restaurantLat + "," + restaurantLng;
-            // FleetTrackingService contains the mock Redis logic for assigning a driver.
-            java.util.List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds);
+            java.util.List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds, fleetSearchRadiusKm);
+            reservedCityId = cityId;
+            reservedDriverIds = driverIds != null ? driverIds : java.util.Collections.emptyList();
             if (driverIds != null && !driverIds.isEmpty()) {
                 log.info("Successfully dispatched drivers {} for order {}", driverIds, orderId);
                 // valueToTree + put("eventType", ...) is the house pattern (WebhookProcessingService
@@ -91,6 +97,7 @@ public class DispatchEventConsumer {
                 try {
                     log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                    resultPublished = true;
                 } catch (Exception ex) {
                     log.error("Failed to publish DISPATCH_CANDIDATE_FOUND for order {}.", orderId, ex);
                     throw ex;
@@ -113,11 +120,25 @@ public class DispatchEventConsumer {
                 try {
                     log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name(), orderId);
                     kafkaTemplate.send(message).get(3, java.util.concurrent.TimeUnit.SECONDS);
+                    resultPublished = true;
                 } catch (Exception ex) {
                     log.error("Failed to publish DISPATCH_FAILED for order {}", orderId, ex);
                     throw ex;
                 }
-            }        } catch (Exception e) {
+            }
+            redisIdempotencyService.markProcessed(idempotencyKeyStr, claimToken);
+        } catch (Exception e) {
+            if (!resultPublished && reservedCityId != null && !reservedDriverIds.isEmpty()) {
+                try {
+                    fleetTrackingService.releaseDrivers(reservedCityId, reservedDriverIds);
+                } catch (Exception compensationError) {
+                    log.error("Failed to release reserved drivers after dispatch processing failed", compensationError);
+                    e.addSuppressed(compensationError);
+                }
+            }
+            if (!resultPublished) {
+                redisIdempotencyService.releaseProcessing(idempotencyKeyStr, claimToken);
+            }
             log.error("Failed to process dispatch event", e);
             throw new RuntimeException("Failed to process dispatch event", e);
         }

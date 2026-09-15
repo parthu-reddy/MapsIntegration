@@ -96,15 +96,26 @@ public class FleetTrackingService {
         return null;
     }
 
-    @Tool(description = "Dispatch an order to the nearest available drivers based on the restaurant\'s coordinates within a city. Finds drivers in a 5km radius, filters by availability, sorts by driving ETA, and returns a list of top candidates.")
+    @Tool(description = "Dispatch an order to the nearest available drivers based on the restaurant's coordinates within a city and radius, then reserve candidates atomically.")
     public List<String> dispatchOrder(String cityId, String restaurantCoords, List<String> excludedDriverIds) {
+        return dispatchOrder(cityId, restaurantCoords, excludedDriverIds,
+                com.fooddelivery.common.constants.AppConstants.FLEET_SEARCH_RADIUS_KM);
+    }
+
+    public List<String> dispatchOrder(String cityId, String restaurantCoords, List<String> excludedDriverIds, double radiusKm) {
+        if (cityId == null || cityId.isBlank()) {
+            throw new IllegalArgumentException("cityId is required for dispatch");
+        }
+        if (radiusKm <= 0) {
+            throw new IllegalArgumentException("radiusKm must be positive");
+        }
         String[] coords = restaurantCoords.split(",");
         double restLat = Double.parseDouble(coords[0]);
         double restLng = Double.parseDouble(coords[1]);
         String geoKey = "drivers:geo:" + cityId;
         String availKey = "drivers:available:" + cityId;
         // 1. Spatial Filtering
-        Circle circle = new Circle(new Point(restLng, restLat), new Distance(com.fooddelivery.common.constants.AppConstants.MAX_DELIVERY_RADIUS_KM, org.springframework.data.geo.Metrics.KILOMETERS));
+        Circle circle = new Circle(new Point(restLng, restLat), new Distance(radiusKm, org.springframework.data.geo.Metrics.KILOMETERS));
         RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs().includeCoordinates();
         GeoResults<RedisGeoCommands.GeoLocation<String>> nearbyDrivers = redisTemplate.opsForGeo().radius(geoKey, circle, args);
         if (nearbyDrivers == null || !nearbyDrivers.iterator().hasNext()) {
@@ -150,17 +161,44 @@ public class FleetTrackingService {
             }
         }
         candidates.sort(Comparator.comparingDouble(c -> c.duration));
-        List<String> topCandidates = new ArrayList<>();
-        for (int i = 0; i < Math.min(maxCandidates, candidates.size()); i++) {
-            topCandidates.add(candidates.get(i).id);
+        java.util.List<String> rankedDriverIds = candidates.stream().map(c -> c.id).toList();
+        java.util.List<String> reserved = reserveAvailableDrivers(availKey, rankedDriverIds);
+        if (!reserved.isEmpty()) {
+            log.info("Atomically reserved {} dispatched drivers from available pool: {}", reserved.size(), reserved);
         }
-        // Remove dispatched drivers from the available pool to prevent double-dispatching.
-        // They will be added back by releaseDriver() on reject or timeout.
-        if (!topCandidates.isEmpty()) {
-            redisTemplate.opsForSet().remove(availKey, topCandidates.toArray());
-            log.info("Removed {} dispatched drivers from available pool: {}", topCandidates.size(), topCandidates);
+        return reserved.isEmpty() ? null : reserved;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private java.util.List<String> reserveAvailableDrivers(String availabilityKey, java.util.List<String> rankedDriverIds) {
+        if (rankedDriverIds.isEmpty()) {
+            return java.util.Collections.emptyList();
         }
-        return topCandidates.isEmpty() ? null : topCandidates;
+        String script = "local selected = {} "
+                + "local limit = tonumber(ARGV[1]) "
+                + "for i = 2, #ARGV do "
+                + "  if #selected >= limit then break end "
+                + "  if redis.call('SREM', KEYS[1], ARGV[i]) == 1 then table.insert(selected, ARGV[i]) end "
+                + "end "
+                + "return selected";
+        java.util.List<String> args = new java.util.ArrayList<>();
+        args.add(Integer.toString(maxCandidates));
+        args.addAll(rankedDriverIds);
+        org.springframework.data.redis.core.script.RedisScript<java.util.List> redisScript =
+                new org.springframework.data.redis.core.script.DefaultRedisScript<>(script, java.util.List.class);
+        java.util.List result = redisTemplate.execute(redisScript, java.util.List.of(availabilityKey), args.toArray());
+        if (result == null) {
+            return java.util.Collections.emptyList();
+        }
+        return (java.util.List<String>) result.stream().map(Object::toString).toList();
+    }
+
+    public void releaseDrivers(String cityId, java.util.Collection<String> driverIds) {
+        if (driverIds == null || driverIds.isEmpty()) {
+            return;
+        }
+        redisTemplate.opsForSet().add("drivers:available:" + cityId, driverIds.toArray(new String[0]));
+        log.info("Released {} compensated driver reservations in city {}", driverIds.size(), cityId);
     }
 
     @Tool(description = "Release a driver\'s lock and restore their availability in case of a dispatch failure.")

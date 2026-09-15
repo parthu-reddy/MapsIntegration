@@ -62,12 +62,12 @@ class DispatchConsumerContractTest {
 
     @Test
     void consumesDispatchEventAndParsesExcludedDrivers() {
-        Mockito.when(redisIdempotencyService.isDuplicate(anyString())).thenReturn(false);
+        Mockito.when(redisIdempotencyService.beginProcessing(anyString())).thenReturn("claim-token");
 
         stubTrigger.trigger("logistics_dispatch");
 
         await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
-            verify(fleetTrackingService).dispatchOrder(anyString(), anyString(), eq(Collections.emptyList()));
+            verify(fleetTrackingService).dispatchOrder(anyString(), anyString(), eq(Collections.emptyList()), org.mockito.ArgumentMatchers.anyDouble());
         });
     }
 

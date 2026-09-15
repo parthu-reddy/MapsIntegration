@@ -17,6 +17,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 class DispatchEventConsumerTest {
 
@@ -48,7 +49,8 @@ class DispatchEventConsumerTest {
 
     /** The shape logistics_dispatch.groovy pins, verbatim. */
     private static String dispatchPayload(String orderId) {
-        return "{\"orderId\":\"" + orderId + "\",\"restaurantLat\":12.971598,\"restaurantLng\":77.594562,"
+        return "{\"orderId\":\"" + orderId + "\",\"dispatchCityId\":\"BLR\",\"fleetSearchRadiusKm\":5.0,"
+                + "\"restaurantLat\":12.971598,\"restaurantLng\":77.594562,"
                 + "\"deliveryLat\":12.935242,\"deliveryLng\":77.624400,"
                 + "\"deliveryAddress\":\"221B Baker Street, Bangalore\",\"excludedDriverIds\":[]}";
     }
@@ -57,8 +59,8 @@ class DispatchEventConsumerTest {
     void dispatchesAndPublishesCandidateFoundWithTheDriverIds() throws Exception {
         String orderId = java.util.UUID.randomUUID().toString();
         String driverId = java.util.UUID.randomUUID().toString();
-        when(redisIdempotencyService.isDuplicate(any())).thenReturn(false);
-        when(fleetTrackingService.dispatchOrder(any(), any(), any()))
+        when(redisIdempotencyService.beginProcessing(any())).thenReturn("claim-token");
+        when(fleetTrackingService.dispatchOrder(any(), any(), any(), anyDouble()))
                 .thenReturn(java.util.List.of(driverId));
 
         java.util.concurrent.CompletableFuture<org.springframework.kafka.support.SendResult<String, String>> future =
@@ -78,11 +80,13 @@ class DispatchEventConsumerTest {
         org.junit.jupiter.api.Assertions.assertEquals("DISPATCH_CANDIDATE_FOUND",
                 published.get("eventType").asText(), "the body eventType the contract pins");
         org.junit.jupiter.api.Assertions.assertEquals(12.935242, published.get("deliveryLat").asDouble());
+        verify(redisIdempotencyService).markProcessed(any(), eq("claim-token"));
+        verify(redisIdempotencyService, never()).releaseProcessing(any(), any());
     }
 
     @Test
     void aPayloadMissingCoordinatesIsRejectedRatherThanDispatchedFromZeroZero() {
-        when(redisIdempotencyService.isDuplicate(any())).thenReturn(false);
+        when(redisIdempotencyService.beginProcessing(any())).thenReturn("claim-token");
         // Never dispatch from a hardcoded fallback: the coordinates are @NotNull on the event, so
         // this must throw instead of quietly searching for drivers near 0,0.
         String noCoords = "{\"orderId\":\"" + java.util.UUID.randomUUID() + "\"}";
@@ -92,14 +96,56 @@ class DispatchEventConsumerTest {
                         java.util.Map.of("eventId", java.util.UUID.randomUUID().toString())));
 
         org.mockito.Mockito.verify(fleetTrackingService, org.mockito.Mockito.never())
-                .dispatchOrder(any(), any(), any());
+                .dispatchOrder(any(), any(), any(), anyDouble());
+        verify(redisIdempotencyService).releaseProcessing(any(), eq("claim-token"));
     }
 
     @Test
     void testConsumeDispatchEvent_duplicate() throws Exception {
         String payload = "{}";
-        when(redisIdempotencyService.isDuplicate(any())).thenReturn(true);
+        when(redisIdempotencyService.beginProcessing(any())).thenReturn(null);
         dispatchEventConsumer.consumeDispatchEvent(payload, java.util.Map.of("eventId", java.util.UUID.randomUUID().toString()));
-        // Verify we don't process further
+        verify(fleetTrackingService, never()).dispatchOrder(any(), any(), any(), anyDouble());
+    }
+
+    @Test
+    void publicationFailureReleasesReservationsAndAllowsRetry() {
+        String orderId = java.util.UUID.randomUUID().toString();
+        String driverId = java.util.UUID.randomUUID().toString();
+        when(redisIdempotencyService.beginProcessing(any())).thenReturn("claim-token");
+        when(fleetTrackingService.dispatchOrder(any(), any(), any(), anyDouble()))
+                .thenReturn(java.util.List.of(driverId));
+        java.util.concurrent.CompletableFuture<org.springframework.kafka.support.SendResult<String, String>> failed =
+                new java.util.concurrent.CompletableFuture<>();
+        failed.completeExceptionally(new RuntimeException("broker unavailable"));
+        when(kafkaTemplate.send((org.springframework.messaging.Message<String>) any())).thenReturn(failed);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> dispatchEventConsumer.consumeDispatchEvent(dispatchPayload(orderId),
+                        java.util.Map.of("eventId", java.util.UUID.randomUUID().toString())));
+
+        verify(fleetTrackingService).releaseDrivers("BLR", java.util.List.of(driverId));
+        verify(redisIdempotencyService).releaseProcessing(any(), eq("claim-token"));
+        verify(redisIdempotencyService, never()).markProcessed(any(), any());
+    }
+
+    @Test
+    void idempotencyCompletionFailureDoesNotReleaseDriversAfterEventWasPublished() {
+        String orderId = java.util.UUID.randomUUID().toString();
+        String driverId = java.util.UUID.randomUUID().toString();
+        when(redisIdempotencyService.beginProcessing(any())).thenReturn("claim-token");
+        when(fleetTrackingService.dispatchOrder(any(), any(), any(), anyDouble()))
+                .thenReturn(java.util.List.of(driverId));
+        when(kafkaTemplate.send((org.springframework.messaging.Message<String>) any()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        org.mockito.Mockito.doThrow(new RuntimeException("redis unavailable"))
+                .when(redisIdempotencyService).markProcessed(any(), eq("claim-token"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> dispatchEventConsumer.consumeDispatchEvent(dispatchPayload(orderId),
+                        java.util.Map.of("eventId", java.util.UUID.randomUUID().toString())));
+
+        verify(fleetTrackingService, never()).releaseDrivers(any(), any());
+        verify(redisIdempotencyService, never()).releaseProcessing(any(), any());
     }
 }
