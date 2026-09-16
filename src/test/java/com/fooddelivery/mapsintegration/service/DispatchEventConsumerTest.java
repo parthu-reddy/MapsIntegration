@@ -59,6 +59,7 @@ class DispatchEventConsumerTest {
     void dispatchesAndPublishesCandidateFoundWithTheDriverIds() throws Exception {
         String orderId = java.util.UUID.randomUUID().toString();
         String driverId = java.util.UUID.randomUUID().toString();
+        String sourceEventId = java.util.UUID.randomUUID().toString();
         when(redisIdempotencyService.beginProcessing(any())).thenReturn("claim-token");
         when(fleetTrackingService.dispatchOrder(any(), any(), any(), anyDouble()))
                 .thenReturn(java.util.List.of(driverId));
@@ -69,7 +70,7 @@ class DispatchEventConsumerTest {
         when(kafkaTemplate.send((org.springframework.messaging.Message<String>) any())).thenReturn(future);
 
         dispatchEventConsumer.consumeDispatchEvent(dispatchPayload(orderId),
-                java.util.Map.of("eventId", java.util.UUID.randomUUID().toString()));
+                java.util.Map.of("eventId", sourceEventId));
 
         org.mockito.ArgumentCaptor<org.springframework.messaging.Message<String>> sent =
                 org.mockito.ArgumentCaptor.forClass(org.springframework.messaging.Message.class);
@@ -80,6 +81,10 @@ class DispatchEventConsumerTest {
         org.junit.jupiter.api.Assertions.assertEquals("DISPATCH_CANDIDATE_FOUND",
                 published.get("eventType").asText(), "the body eventType the contract pins");
         org.junit.jupiter.api.Assertions.assertEquals(12.935242, published.get("deliveryLat").asDouble());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.UUID.nameUUIDFromBytes(("maps-dispatch-result:" + sourceEventId)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString(),
+                sent.getValue().getHeaders().get("eventId"));
         verify(redisIdempotencyService).markProcessed(any(), eq("claim-token"));
         verify(redisIdempotencyService, never()).releaseProcessing(any(), any());
     }

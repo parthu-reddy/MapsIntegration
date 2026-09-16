@@ -1,13 +1,11 @@
 package com.fooddelivery.mapsintegration.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 
@@ -30,13 +28,16 @@ public class DispatchEventConsumer {
     @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true", dltStrategy = DltStrategy.FAIL_ON_ERROR, exclude = {com.fooddelivery.common.event.EventBindingException.class}, traversingCauses = "true")
     @KafkaListener(topics = com.fooddelivery.common.constants.KafkaConstants.TOPIC_LOGISTICS_DISPATCH, groupId = com.fooddelivery.common.constants.KafkaConstants.GROUP_MAPS_INTEGRATION + "-dispatcheventconsumer")
     public void consumeDispatchEvent(String payload, @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
-        log.info("Received dispatch event: {}", payload);
-        
         String extractedEventId = com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
         if (extractedEventId == null) {
             throw new IllegalArgumentException("Missing eventId header");
         }
         final String resolvedEventId = extractedEventId;
+        log.info("DISPATCH_EVENT_RECEIVED eventId={} payloadBytes={}", resolvedEventId,
+                payload == null ? 0 : payload.length());
+        UUID resultEventId = UUID.nameUUIDFromBytes(
+                ("maps-dispatch-result:" + resolvedEventId)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
         String idempotencyKeyStr = "processed_event:maps:" + resolvedEventId;
 
@@ -65,7 +66,8 @@ public class DispatchEventConsumer {
                     ? request.getExcludedDriverIds() : new java.util.ArrayList<>();
             String cityId = request.getDispatchCityId();
             double fleetSearchRadiusKm = request.getFleetSearchRadiusKm();
-            log.info("Dispatch request for order {} from {},{} to {},{}. Excluded drivers: {}", orderId, restaurantLat, restaurantLng, deliveryLat, deliveryLng, excludedDriverIds);
+            log.info("DISPATCH_REQUEST_VALIDATED eventId={} orderId={} dispatchCityId={} fleetSearchRadiusKm={} excludedDriverCount={}",
+                    resolvedEventId, orderId, cityId, fleetSearchRadiusKm, excludedDriverIds.size());
             String restaurantCoords = restaurantLat + "," + restaurantLng;
             java.util.List<String> driverIds = fleetTrackingService.dispatchOrder(cityId, restaurantCoords, excludedDriverIds, fleetSearchRadiusKm);
             reservedCityId = cityId;
@@ -92,7 +94,7 @@ public class DispatchEventConsumer {
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
                         .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name())
-                        .setHeader("eventId", UUID.randomUUID().toString())
+                        .setHeader("eventId", resultEventId.toString())
                         .build();
                 try {
                     log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_CANDIDATE_FOUND.name(), orderId);
@@ -115,7 +117,7 @@ public class DispatchEventConsumer {
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.TOPIC, com.fooddelivery.common.constants.KafkaConstants.TOPIC_ORDER_EVENTS)
                         .setHeader(org.springframework.kafka.support.KafkaHeaders.KEY, orderId)
                         .setHeader("eventType", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name())
-                        .setHeader("eventId", UUID.randomUUID().toString())
+                        .setHeader("eventId", resultEventId.toString())
                         .build();
                 try {
                     log.info("Triggering event: {} for order: {}", com.fooddelivery.common.constants.EventType.DISPATCH_FAILED.name(), orderId);
@@ -145,7 +147,14 @@ public class DispatchEventConsumer {
     }
 
     @DltHandler
-    public void handleDlt(Object message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        System.err.println("Message failed 5 times and sent to DLT: " + topic + " - " + message);
+    public void handleDlt(String message,
+                          @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
+        log.error("DISPATCH_EVENT_DLT eventId={} eventType={} topic={} payloadBytes={} exception={}",
+                com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventId"),
+                com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventType"),
+                com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, KafkaHeaders.RECEIVED_TOPIC),
+                message == null ? 0 : message.length(),
+                com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers,
+                        KafkaHeaders.EXCEPTION_MESSAGE));
     }
 }
