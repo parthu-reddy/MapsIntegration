@@ -40,7 +40,7 @@ public class FleetTrackingService {
 
     @Tool(description = "Set or update the availability status of a driver. If true, the driver is ready to accept orders.")
     public void setDriverAvailability(String cityId, String driverId, boolean available) {
-        String key = "drivers:available:" + cityId;
+        String key = com.fooddelivery.common.constants.RedisKeyConstants.PREFIX_DRIVERS_AVAILABLE + cityId;
         if (available) {
             redisTemplate.opsForSet().add(key, driverId);
         } else {
@@ -50,14 +50,14 @@ public class FleetTrackingService {
 
     @Tool(description = "Retrieve a list of all currently available drivers (driver IDs) in a specific city who are ready to accept orders.")
     public java.util.Set<String> getAvailableDrivers(String cityId) {
-        String key = "drivers:available:" + cityId;
+        String key = com.fooddelivery.common.constants.RedisKeyConstants.PREFIX_DRIVERS_AVAILABLE + cityId;
         return redisTemplate.opsForSet().members(key);
     }
 
     @Tool(description = "Delete a driver entirely from the system when they go offline permanently.")
     public void deleteDriver(String cityId, String driverId) {
         String geoKey = "drivers:geo:" + cityId;
-        String availKey = "drivers:available:" + cityId;
+        String availKey = com.fooddelivery.common.constants.RedisKeyConstants.PREFIX_DRIVERS_AVAILABLE + cityId;
         redisTemplate.opsForGeo().remove(geoKey, driverId);
         redisTemplate.opsForSet().remove(availKey, driverId);
     }
@@ -113,7 +113,7 @@ public class FleetTrackingService {
         double restLat = Double.parseDouble(coords[0]);
         double restLng = Double.parseDouble(coords[1]);
         String geoKey = "drivers:geo:" + cityId;
-        String availKey = "drivers:available:" + cityId;
+        String availKey = com.fooddelivery.common.constants.RedisKeyConstants.PREFIX_DRIVERS_AVAILABLE + cityId;
         // 1. Spatial Filtering
         Circle circle = new Circle(new Point(restLng, restLat), new Distance(radiusKm, org.springframework.data.geo.Metrics.KILOMETERS));
         RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs().includeCoordinates();
@@ -197,7 +197,7 @@ public class FleetTrackingService {
         if (driverIds == null || driverIds.isEmpty()) {
             return;
         }
-        redisTemplate.opsForSet().add("drivers:available:" + cityId, driverIds.toArray(new String[0]));
+        redisTemplate.opsForSet().add(com.fooddelivery.common.constants.RedisKeyConstants.PREFIX_DRIVERS_AVAILABLE + cityId, driverIds.toArray(new String[0]));
         log.info("Released {} compensated driver reservations in city {}", driverIds.size(), cityId);
     }
 
@@ -213,7 +213,7 @@ public class FleetTrackingService {
     @Tool(description = "Check if there are any available drivers within a specific radius of a location.")
     public boolean hasAvailableDriversNearby(String cityId, double lat, double lng, double radiusKm) {
         String geoKey = "drivers:geo:" + cityId;
-        String availKey = "drivers:available:" + cityId;
+        String availKey = com.fooddelivery.common.constants.RedisKeyConstants.PREFIX_DRIVERS_AVAILABLE + cityId;
         Circle circle = new Circle(new Point(lng, lat), new Distance(radiusKm, org.springframework.data.geo.Metrics.KILOMETERS));
         RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs();
         GeoResults<RedisGeoCommands.GeoLocation<String>> nearbyDrivers = redisTemplate.opsForGeo().radius(geoKey, circle, args);
