@@ -35,7 +35,7 @@ import static org.mockito.Mockito.verify;
 @ActiveProfiles("contract-test")
 @AutoConfigureStubRunner(ids = "com.fooddelivery:delivery-executive-application:+:stubs")
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.BEFORE_CLASS)
-@EmbeddedKafka(partitions = 1, topics = {"platform.logistics.dispatch"})
+@EmbeddedKafka(adminTimeout = 60, partitions = 1, topics = {"platform.logistics.dispatch"})
 class DispatchConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
