@@ -201,7 +201,7 @@ public class FleetTrackingService {
         log.info("Released {} compensated driver reservations in city {}", driverIds.size(), cityId);
     }
 
-    @Tool(description = "Release a driver\'s lock and restore their availability in case of a dispatch failure.")
+    @Tool(description = "Release a driver's lock and restore their availability in case of a dispatch failure.")
     public void releaseDriver(String cityId, String driverId) {
         log.info("Releasing driver {} in city {} (restoring availability)", driverId, cityId);
         String lockKey = "driver:lock:" + driverId;
