@@ -21,6 +21,7 @@ public abstract class ContractTestBase {
         when(locationService.resolveCoordinatesToAddress(anyDouble(), anyDouble())).thenReturn("Bangalore, Karnataka, India");
 
         IntegrationController controller = new IntegrationController(locationService, dispatchService, fleetTrackingService);
-        RestAssuredMockMvc.standaloneSetup(controller);
+        // Serialize as production does: see PlatformJson (contract-harness Jackson drift).
+        com.fooddelivery.common.contract.PlatformJson.standaloneSetup(controller);
     }
 }

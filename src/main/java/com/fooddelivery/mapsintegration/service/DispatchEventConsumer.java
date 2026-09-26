@@ -149,12 +149,13 @@ public class DispatchEventConsumer {
     @DltHandler
     public void handleDlt(String message,
                           @org.springframework.messaging.handler.annotation.Headers java.util.Map<String, Object> headers) {
-        log.error("DISPATCH_EVENT_DLT eventId={} eventType={} topic={} payloadBytes={} exception={}",
+        log.error("DISPATCH_EVENT_DLT eventId={} eventType={} topic={} payloadBytes={} exception={} replay={}",
                 com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventId"),
                 com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, "eventType"),
                 com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers, KafkaHeaders.RECEIVED_TOPIC),
                 message == null ? 0 : message.length(),
                 com.fooddelivery.common.util.KafkaHeaderUtils.extractHeaderValue(headers,
-                        KafkaHeaders.EXCEPTION_MESSAGE));
+                        KafkaHeaders.EXCEPTION_MESSAGE),
+                com.fooddelivery.common.util.KafkaHeaderUtils.deadLetterPosition(headers));
     }
 }
